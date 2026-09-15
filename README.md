@@ -38,6 +38,14 @@ All commands are run from the root of the project, from a terminal:
 | `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
 | `npm run astro -- --help` | Get help using the Astro CLI                     |
 
+## 🗄️ Supabase
+
+El catálogo (`productos`) y los pedidos (`pedidos`) viven en Supabase. Para levantar el proyecto en local:
+
+1. Crea un proyecto en [supabase.com](https://supabase.com).
+2. En el SQL Editor del proyecto, pega y ejecuta `supabase/schema.sql` (tablas, RLS, bucket de fotos `fotos-pedidos` y el seed con el catálogo actual).
+3. Copia `.env.example` a `.env` y rellena `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY` con los valores de Project Settings > API.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

@@ -3,8 +3,9 @@ import Layout from "../layouts/Layout.astro";
 import CategoryCard from "../components/CategoryCard.astro";
 import ProductCard from "../components/ProductCard.astro";
 import { categories } from "../data/categories";
-import { products } from "../data/products";
+import { getProducts } from "../data/products";
 
+const products = await getProducts();
 const featuredProducts = products.filter((p) => p.featured);
 
 const steps = [

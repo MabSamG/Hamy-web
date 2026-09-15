@@ -2,7 +2,9 @@
 import Layout from "../../layouts/Layout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { categories } from "../../data/categories";
-import { products } from "../../data/products";
+import { getProducts } from "../../data/products";
+
+const products = await getProducts();
 ---
 
 <Layout title="Productos" description="Catálogo completo de artesanía en resina hecha a mano: llaveros, marcapáginas, decoración y recuerdos personalizados.">
