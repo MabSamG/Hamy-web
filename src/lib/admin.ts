@@ -1,0 +1,87 @@
+import { supabase } from "./supabase";
+
+export type PedidoEstado = "recibido" | "preparando" | "enviado";
+
+export type PedidoItemCampo = {
+  label: string;
+  valor?: string | null;
+  foto?: string | null;
+};
+
+export type PedidoItemGrupo = {
+  label: string;
+  campos: Record<string, PedidoItemCampo>;
+};
+
+export type PedidoItem = {
+  producto_slug: string;
+  producto_nombre: string;
+  cantidad: number;
+  precio_unitario_cents: number;
+  personalizacion: Record<string, PedidoItemGrupo>;
+};
+
+export type Pedido = {
+  id: string;
+  creado_en: string;
+  estado: PedidoEstado;
+  cliente_nombre: string;
+  cliente_email: string;
+  cliente_telefono: string | null;
+  cliente_direccion: string | null;
+  items: PedidoItem[];
+  total_cents: number;
+  notas: string | null;
+};
+
+export async function listPedidos(): Promise<Pedido[]> {
+  const { data, error } = await supabase.from("pedidos").select("*").order("creado_en", { ascending: false });
+  if (error) throw new Error(`No se pudieron cargar los pedidos: ${error.message}`);
+  return (data ?? []) as Pedido[];
+}
+
+export async function updatePedidoEstado(id: string, estado: PedidoEstado): Promise<void> {
+  const { error } = await supabase.from("pedidos").update({ estado }).eq("id", id);
+  if (error) throw new Error(`No se pudo actualizar el estado: ${error.message}`);
+}
+
+/** Bucket is private, so photos need a signed URL rather than a public one. */
+export async function getFotoUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from("fotos-pedidos").createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+export type ProductoAdmin = {
+  id: string;
+  slug: string;
+  nombre: string;
+  categoria: string;
+  categorias: string[];
+  precio_base: number;
+  descripcion_corta: string;
+  descripcion: string;
+  emoji: string | null;
+  imagen_principal: string | null;
+  stock: number | null;
+  destacado: boolean;
+};
+
+const PRODUCTO_ADMIN_COLUMNS =
+  "id, slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, imagen_principal, stock, destacado";
+
+export async function listProductosAdmin(): Promise<ProductoAdmin[]> {
+  const { data, error } = await supabase
+    .from("productos")
+    .select(PRODUCTO_ADMIN_COLUMNS)
+    .order("creado_en", { ascending: true });
+  if (error) throw new Error(`No se pudo cargar el catálogo: ${error.message}`);
+  return (data ?? []) as ProductoAdmin[];
+}
+
+export type ProductoUpdate = Partial<Omit<ProductoAdmin, "id" | "slug">>;
+
+export async function updateProducto(id: string, patch: ProductoUpdate): Promise<void> {
+  const { error } = await supabase.from("productos").update(patch).eq("id", id);
+  if (error) throw new Error(`No se pudo guardar el producto: ${error.message}`);
+}

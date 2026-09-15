@@ -3,14 +3,475 @@ import Layout from "../../layouts/Layout.astro";
 ---
 
 <Layout title="Admin" description="Panel de administración de Hamy.">
-  <section class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
-    <span class="text-5xl" aria-hidden="true">🔐</span>
-    <h1 class="mt-4 font-display text-4xl font-bold text-hamy-brown">Panel de administración</h1>
-    <p class="mt-4 text-hamy-brown-light">
-      Aquí podrás gestionar el stock, ver los pedidos entrantes con su personalización y fotos
-      adjuntas, y marcarlos como preparado o enviado. Esta sección se conectará a Supabase
-      (con acceso protegido por login) en un siguiente paso.
-    </p>
-    <a href="/" class="btn-secondary mt-8 inline-flex">Volver al inicio</a>
+  <section class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div id="admin-login" class="mx-auto max-w-sm py-10">
+      <div class="text-center">
+        <span class="text-4xl" aria-hidden="true">🔐</span>
+        <h1 class="mt-3 font-display text-3xl font-bold text-hamy-brown">Acceso administrador</h1>
+      </div>
+      <form id="login-form" class="mt-6 space-y-3 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20" novalidate>
+        <div>
+          <label for="login-email" class="block text-sm font-semibold text-hamy-brown">Email</label>
+          <input
+            id="login-email"
+            type="email"
+            required
+            class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+          />
+        </div>
+        <div>
+          <label for="login-password" class="block text-sm font-semibold text-hamy-brown">Contraseña</label>
+          <input
+            id="login-password"
+            type="password"
+            required
+            class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+          />
+        </div>
+        <p id="login-error" class="hidden text-sm font-semibold text-red-500"></p>
+        <button type="submit" id="login-submit" class="btn-primary w-full justify-center">Entrar</button>
+      </form>
+    </div>
+
+    <div id="admin-dashboard" class="hidden">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h1 class="font-display text-3xl font-bold text-hamy-brown">Panel de administración</h1>
+        <button type="button" id="logout-btn" class="btn-secondary">Cerrar sesión</button>
+      </div>
+
+      <div class="mt-6 flex gap-2 border-b border-hamy-pink-light/30">
+        <button type="button" data-tab="pedidos" class="tab-btn border-b-2 border-hamy-coral px-4 py-2 text-sm font-semibold text-hamy-coral">
+          Pedidos
+        </button>
+        <button
+          type="button"
+          data-tab="productos"
+          class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
+        >
+          Catálogo
+        </button>
+      </div>
+
+      <div id="tab-pedidos" class="tab-panel mt-6">
+        <p id="pedidos-loading" class="text-hamy-brown-light">Cargando pedidos...</p>
+        <p id="pedidos-empty" class="hidden text-hamy-brown-light">Todavía no hay pedidos.</p>
+        <ul id="pedidos-list" class="space-y-4"></ul>
+      </div>
+
+      <div id="tab-productos" class="tab-panel mt-6 hidden">
+        <p id="productos-loading" class="text-hamy-brown-light">Cargando catálogo...</p>
+        <ul id="productos-list" class="space-y-4"></ul>
+      </div>
+    </div>
   </section>
 </Layout>
+
+<script>
+  import { supabase } from "../../lib/supabase";
+  import {
+    listPedidos,
+    updatePedidoEstado,
+    getFotoUrl,
+    listProductosAdmin,
+    updateProducto,
+    type Pedido,
+    type PedidoEstado,
+    type ProductoAdmin,
+  } from "../../lib/admin";
+
+  const loginSection = document.getElementById("admin-login");
+  const dashboardSection = document.getElementById("admin-dashboard");
+  const loginForm = document.getElementById("login-form") as HTMLFormElement | null;
+  const loginError = document.getElementById("login-error");
+  const loginSubmit = document.getElementById("login-submit") as HTMLButtonElement | null;
+  const logoutBtn = document.getElementById("logout-btn");
+
+  const pedidosList = document.getElementById("pedidos-list");
+  const pedidosLoading = document.getElementById("pedidos-loading");
+  const pedidosEmpty = document.getElementById("pedidos-empty");
+  const productosList = document.getElementById("productos-list");
+  const productosLoading = document.getElementById("productos-loading");
+
+  const tabButtons = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
+  const tabPanels: Record<string, HTMLElement | null> = {
+    pedidos: document.getElementById("tab-pedidos"),
+    productos: document.getElementById("tab-productos"),
+  };
+
+  tabButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab ?? "pedidos";
+      tabButtons.forEach((b) => {
+        const active = b === btn;
+        b.classList.toggle("border-hamy-coral", active);
+        b.classList.toggle("text-hamy-coral", active);
+        b.classList.toggle("border-transparent", !active);
+        b.classList.toggle("text-hamy-brown-light", !active);
+      });
+      Object.entries(tabPanels).forEach(([key, panel]) => panel?.classList.toggle("hidden", key !== tab));
+    });
+  });
+
+  function formatDate(iso: string): string {
+    return new Date(iso).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" });
+  }
+
+  function formatPriceCents(cents: number): string {
+    return (cents / 100).toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+  }
+
+  const ESTADOS: { value: PedidoEstado; label: string }[] = [
+    { value: "recibido", label: "Recibido" },
+    { value: "preparando", label: "Preparando" },
+    { value: "enviado", label: "Enviado" },
+  ];
+
+  function renderPedido(pedido: Pedido): HTMLElement {
+    const li = document.createElement("li");
+    li.className = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20";
+
+    const header = document.createElement("div");
+    header.className = "flex flex-wrap items-start justify-between gap-3";
+
+    const meta = document.createElement("div");
+    const dateP = document.createElement("p");
+    dateP.className = "text-xs text-hamy-brown-light";
+    dateP.textContent = formatDate(pedido.creado_en);
+    const clientP = document.createElement("p");
+    clientP.className = "font-display text-lg font-bold text-hamy-brown";
+    clientP.textContent = `${pedido.cliente_nombre} · ${pedido.cliente_email}`;
+    const contactP = document.createElement("p");
+    contactP.className = "text-xs text-hamy-brown-light";
+    contactP.textContent = [pedido.cliente_telefono, pedido.cliente_direccion].filter(Boolean).join(" · ") || "Sin datos adicionales";
+    meta.append(dateP, clientP, contactP);
+
+    const controls = document.createElement("div");
+    controls.className = "flex flex-col items-end gap-1";
+    const totalP = document.createElement("p");
+    totalP.className = "font-bold text-hamy-coral";
+    totalP.textContent = formatPriceCents(pedido.total_cents);
+
+    const estadoWrap = document.createElement("div");
+    estadoWrap.className = "flex items-center gap-2";
+    const select = document.createElement("select");
+    select.className =
+      "rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-1 text-xs font-semibold text-hamy-brown focus:border-hamy-coral focus:outline-none";
+    ESTADOS.forEach((estado) => {
+      const option = document.createElement("option");
+      option.value = estado.value;
+      option.textContent = estado.label;
+      if (estado.value === pedido.estado) option.selected = true;
+      select.appendChild(option);
+    });
+    const savedLabel = document.createElement("span");
+    savedLabel.className = "hidden text-xs font-semibold text-green-600";
+    savedLabel.textContent = "Guardado ✓";
+    select.addEventListener("change", async () => {
+      const previous = pedido.estado;
+      select.disabled = true;
+      try {
+        await updatePedidoEstado(pedido.id, select.value as PedidoEstado);
+        pedido.estado = select.value as PedidoEstado;
+        savedLabel.classList.remove("hidden");
+        setTimeout(() => savedLabel.classList.add("hidden"), 2000);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo actualizar el estado.");
+        select.value = previous;
+      } finally {
+        select.disabled = false;
+      }
+    });
+    estadoWrap.append(select, savedLabel);
+    controls.append(totalP, estadoWrap);
+
+    header.append(meta, controls);
+    li.appendChild(header);
+
+    if (pedido.notas) {
+      const notasP = document.createElement("p");
+      notasP.className = "mt-2 rounded-lg bg-hamy-cream-dark px-3 py-2 text-xs text-hamy-brown-light";
+      notasP.textContent = `Notas: ${pedido.notas}`;
+      li.appendChild(notasP);
+    }
+
+    const itemsWrap = document.createElement("div");
+    itemsWrap.className = "mt-4 space-y-3 border-t border-hamy-pink-light/20 pt-4";
+
+    for (const item of pedido.items) {
+      const itemEl = document.createElement("div");
+      itemEl.className = "rounded-xl bg-hamy-cream-dark/60 p-4";
+
+      const itemHeader = document.createElement("div");
+      itemHeader.className = "flex items-center justify-between text-sm font-semibold text-hamy-brown";
+      const itemTitle = document.createElement("span");
+      itemTitle.textContent = `${item.producto_nombre} × ${item.cantidad}`;
+      const itemPrice = document.createElement("span");
+      itemPrice.textContent = formatPriceCents(item.precio_unitario_cents);
+      itemHeader.append(itemTitle, itemPrice);
+      itemEl.appendChild(itemHeader);
+
+      const groupsWrap = document.createElement("div");
+      groupsWrap.className = "mt-2 space-y-2";
+
+      for (const grupo of Object.values(item.personalizacion ?? {})) {
+        const groupEl = document.createElement("div");
+        const groupLabel = document.createElement("p");
+        groupLabel.className = "text-xs font-bold uppercase tracking-wide text-hamy-brown-light";
+        groupLabel.textContent = grupo.label;
+        groupEl.appendChild(groupLabel);
+
+        const fieldsList = document.createElement("div");
+        fieldsList.className = "mt-1 flex flex-wrap gap-3";
+
+        for (const campo of Object.values(grupo.campos ?? {})) {
+          if (campo.foto) {
+            const photoWrap = document.createElement("div");
+            photoWrap.className = "flex flex-col items-center gap-1";
+            const img = document.createElement("img");
+            img.className = "h-20 w-20 rounded-lg object-cover ring-1 ring-hamy-pink-light/30";
+            img.alt = campo.label;
+            photoWrap.appendChild(img);
+            const caption = document.createElement("span");
+            caption.className = "text-[10px] text-hamy-brown-light";
+            caption.textContent = campo.label;
+            photoWrap.appendChild(caption);
+            fieldsList.appendChild(photoWrap);
+
+            const fotoPath = campo.foto;
+            getFotoUrl(fotoPath).then((url) => {
+              if (url) img.src = url;
+            });
+          } else {
+            const textP = document.createElement("p");
+            textP.className = "text-sm text-hamy-brown";
+            textP.textContent = `${campo.label}: ${campo.valor || "(sin especificar)"}`;
+            fieldsList.appendChild(textP);
+          }
+        }
+
+        groupEl.appendChild(fieldsList);
+        groupsWrap.appendChild(groupEl);
+      }
+
+      itemEl.appendChild(groupsWrap);
+      itemsWrap.appendChild(itemEl);
+    }
+
+    li.appendChild(itemsWrap);
+    return li;
+  }
+
+  async function loadPedidos() {
+    if (!pedidosList) return;
+    pedidosLoading?.classList.remove("hidden");
+    pedidosEmpty?.classList.add("hidden");
+    try {
+      const pedidos = await listPedidos();
+      pedidosList.innerHTML = "";
+      pedidosEmpty?.classList.toggle("hidden", pedidos.length > 0);
+      pedidos.forEach((pedido) => pedidosList.appendChild(renderPedido(pedido)));
+    } catch (err) {
+      pedidosList.innerHTML = "";
+      const errorP = document.createElement("p");
+      errorP.className = "text-sm font-semibold text-red-500";
+      errorP.textContent = err instanceof Error ? err.message : "No se pudieron cargar los pedidos.";
+      pedidosList.appendChild(errorP);
+    } finally {
+      pedidosLoading?.classList.add("hidden");
+    }
+  }
+
+  function textInput(value: string): HTMLInputElement {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = value;
+    input.className =
+      "mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none";
+    return input;
+  }
+
+  function fieldWrap(labelText: string, input: HTMLElement, span2 = false): HTMLLabelElement {
+    const wrap = document.createElement("label");
+    wrap.className = `block text-xs font-semibold text-hamy-brown ${span2 ? "sm:col-span-2" : ""}`;
+    wrap.append(labelText, document.createElement("br"), input);
+    return wrap;
+  }
+
+  function renderProducto(producto: ProductoAdmin): HTMLElement {
+    const li = document.createElement("li");
+    li.className = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20";
+
+    const header = document.createElement("div");
+    header.className = "flex items-center gap-3";
+    const emojiSpan = document.createElement("span");
+    emojiSpan.className = "text-3xl";
+    emojiSpan.textContent = producto.emoji ?? "✨";
+    const titleWrap = document.createElement("div");
+    const titleP = document.createElement("p");
+    titleP.className = "font-display text-lg font-bold text-hamy-brown";
+    titleP.textContent = producto.nombre;
+    const slugP = document.createElement("p");
+    slugP.className = "text-xs text-hamy-brown-light";
+    slugP.textContent = `slug: ${producto.slug} (no editable)`;
+    titleWrap.append(titleP, slugP);
+    header.append(emojiSpan, titleWrap);
+    li.appendChild(header);
+
+    const grid = document.createElement("div");
+    grid.className = "mt-4 grid gap-3 sm:grid-cols-2";
+
+    const nombreInput = textInput(producto.nombre);
+    const categoriaInput = textInput(producto.categoria);
+    const categoriasInput = textInput(producto.categorias.join(", "));
+    const precioInput = document.createElement("input");
+    precioInput.type = "number";
+    precioInput.step = "0.01";
+    precioInput.min = "0";
+    precioInput.value = (producto.precio_base / 100).toFixed(2);
+    precioInput.className = nombreInput.className;
+    const stockInput = document.createElement("input");
+    stockInput.type = "number";
+    stockInput.min = "0";
+    stockInput.placeholder = "Bajo pedido";
+    stockInput.value = producto.stock === null ? "" : String(producto.stock);
+    stockInput.className = nombreInput.className;
+    const emojiInput = textInput(producto.emoji ?? "");
+    const descCortaInput = textInput(producto.descripcion_corta);
+    const descripcionTextarea = document.createElement("textarea");
+    descripcionTextarea.value = producto.descripcion;
+    descripcionTextarea.rows = 3;
+    descripcionTextarea.className = nombreInput.className;
+
+    const destacadoLabel = document.createElement("label");
+    destacadoLabel.className = "flex items-center gap-2 text-xs font-semibold text-hamy-brown sm:col-span-2";
+    const destacadoInput = document.createElement("input");
+    destacadoInput.type = "checkbox";
+    destacadoInput.checked = producto.destacado;
+    destacadoLabel.append(destacadoInput, document.createTextNode("Destacado en Inicio"));
+
+    grid.append(
+      fieldWrap("Nombre", nombreInput),
+      fieldWrap("Categoría principal", categoriaInput),
+      fieldWrap("Categorías (separadas por coma)", categoriasInput),
+      fieldWrap("Precio (€)", precioInput),
+      fieldWrap("Stock (vacío = bajo pedido)", stockInput),
+      fieldWrap("Emoji", emojiInput),
+      fieldWrap("Descripción corta", descCortaInput, true),
+      fieldWrap("Descripción completa", descripcionTextarea, true),
+      destacadoLabel,
+    );
+    li.appendChild(grid);
+
+    const footer = document.createElement("div");
+    footer.className = "mt-4 flex items-center gap-3";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.className = "btn-primary";
+    saveBtn.textContent = "Guardar cambios";
+    const savedLabel = document.createElement("span");
+    savedLabel.className = "hidden text-sm font-semibold text-green-600";
+    savedLabel.textContent = "Guardado ✓";
+    const errorLabel = document.createElement("span");
+    errorLabel.className = "hidden text-sm font-semibold text-red-500";
+
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true;
+      errorLabel.classList.add("hidden");
+      try {
+        const categorias = categoriasInput.value
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean);
+        const categoriaPrincipal = categoriaInput.value.trim();
+        await updateProducto(producto.id, {
+          nombre: nombreInput.value.trim(),
+          categoria: categoriaPrincipal,
+          categorias: categorias.length ? categorias : [categoriaPrincipal],
+          precio_base: Math.round(parseFloat(precioInput.value || "0") * 100),
+          stock: stockInput.value === "" ? null : Number(stockInput.value),
+          emoji: emojiInput.value.trim() || null,
+          descripcion_corta: descCortaInput.value.trim(),
+          descripcion: descripcionTextarea.value.trim(),
+          destacado: destacadoInput.checked,
+        });
+        savedLabel.classList.remove("hidden");
+        setTimeout(() => savedLabel.classList.add("hidden"), 2000);
+      } catch (err) {
+        errorLabel.textContent = err instanceof Error ? err.message : "No se pudo guardar.";
+        errorLabel.classList.remove("hidden");
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    footer.append(saveBtn, savedLabel, errorLabel);
+    li.appendChild(footer);
+
+    return li;
+  }
+
+  async function loadProductos() {
+    if (!productosList) return;
+    productosLoading?.classList.remove("hidden");
+    try {
+      const productos = await listProductosAdmin();
+      productosList.innerHTML = "";
+      productos.forEach((producto) => productosList.appendChild(renderProducto(producto)));
+    } catch (err) {
+      productosList.innerHTML = "";
+      const errorP = document.createElement("p");
+      errorP.className = "text-sm font-semibold text-red-500";
+      errorP.textContent = err instanceof Error ? err.message : "No se pudo cargar el catálogo.";
+      productosList.appendChild(errorP);
+    } finally {
+      productosLoading?.classList.add("hidden");
+    }
+  }
+
+  let dashboardLoaded = false;
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      loginSection?.classList.add("hidden");
+      dashboardSection?.classList.remove("hidden");
+      if (!dashboardLoaded || event === "SIGNED_IN") {
+        dashboardLoaded = true;
+        loadPedidos();
+        loadProductos();
+      }
+    } else {
+      dashboardLoaded = false;
+      dashboardSection?.classList.add("hidden");
+      loginSection?.classList.remove("hidden");
+    }
+  });
+
+  loginForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    loginError?.classList.add("hidden");
+
+    const email = (document.getElementById("login-email") as HTMLInputElement).value.trim();
+    const password = (document.getElementById("login-password") as HTMLInputElement).value;
+
+    if (loginSubmit) {
+      loginSubmit.disabled = true;
+      loginSubmit.textContent = "Entrando...";
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error && loginError) {
+      loginError.textContent = "Email o contraseña incorrectos.";
+      loginError.classList.remove("hidden");
+    }
+
+    if (loginSubmit) {
+      loginSubmit.disabled = false;
+      loginSubmit.textContent = "Entrar";
+    }
+  });
+
+  logoutBtn?.addEventListener("click", async () => {
+    await supabase.auth.signOut();
+  });
+</script>
