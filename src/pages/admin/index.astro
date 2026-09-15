@@ -1,5 +1,6 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 ---
 
 <Layout title="Admin" description="Panel de administración de Hamy.">
@@ -59,8 +60,125 @@ import Layout from "../../layouts/Layout.astro";
       </div>
 
       <div id="tab-productos" class="tab-panel mt-6 hidden">
-        <p id="productos-loading" class="text-hamy-brown-light">Cargando catálogo...</p>
-        <ul id="productos-list" class="space-y-4"></ul>
+        <div class="flex items-center justify-between gap-4">
+          <p id="productos-loading" class="text-hamy-brown-light">Cargando catálogo...</p>
+          <button type="button" id="nuevo-producto-btn" class="btn-primary ml-auto">+ Añadir producto</button>
+        </div>
+
+        <div id="nuevo-producto-panel" class="mt-4 hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+          <h3 class="font-heading text-lg font-bold text-hamy-brown">Nuevo producto</h3>
+          <form id="nuevo-producto-form" class="mt-4 grid gap-3 sm:grid-cols-2" novalidate>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Nombre *
+              <input
+                id="np-nombre"
+                type="text"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Slug (URL) *
+              <input
+                id="np-slug"
+                type="text"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <p class="text-xs text-hamy-brown-light sm:col-span-2">
+              El slug se genera solo a partir del nombre. Puedes editarlo antes de guardar, pero evita cambiarlo una vez publicado: es lo que conecta el producto con su página.
+            </p>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Categoría principal *
+              <input
+                id="np-categoria"
+                type="text"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Categorías (separadas por coma)
+              <input
+                id="np-categorias"
+                type="text"
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Precio (€) *
+              <input
+                id="np-precio"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Stock (vacío = bajo pedido)
+              <input
+                id="np-stock"
+                type="number"
+                min="0"
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Emoji
+              <input
+                id="np-emoji"
+                type="text"
+                placeholder="✨"
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
+              Tipo de personalización *
+              <select
+                id="np-plantilla"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              >
+                {PERSONALIZATION_TEMPLATES.map((template) => <option value={template.id}>{template.label}</option>)}
+              </select>
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown sm:col-span-2">
+              Descripción corta *
+              <input
+                id="np-desc-corta"
+                type="text"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown sm:col-span-2">
+              Descripción completa *
+              <textarea
+                id="np-descripcion"
+                rows="3"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              ></textarea>
+            </label>
+            <label class="flex items-center gap-2 text-xs font-semibold text-hamy-brown sm:col-span-2">
+              <input id="np-destacado" type="checkbox" />
+              Destacado en Inicio
+            </label>
+
+            <p id="nuevo-producto-error" class="hidden text-sm font-semibold text-red-500 sm:col-span-2"></p>
+            <p id="nuevo-producto-success" class="hidden text-sm font-semibold text-green-600 sm:col-span-2"></p>
+
+            <div class="flex gap-3 sm:col-span-2">
+              <button type="submit" id="nuevo-producto-submit" class="btn-primary">Guardar y publicar</button>
+              <button type="button" id="nuevo-producto-cancelar" class="btn-secondary">Cancelar</button>
+            </div>
+          </form>
+        </div>
+
+        <ul id="productos-list" class="mt-6 space-y-4"></ul>
       </div>
     </div>
   </section>
@@ -75,10 +193,13 @@ import Layout from "../../layouts/Layout.astro";
     listProductosAdmin,
     updateProducto,
     deleteProducto,
+    createProducto,
+    slugify,
     type Pedido,
     type PedidoEstado,
     type ProductoAdmin,
   } from "../../lib/admin";
+  import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
   const loginSection = document.getElementById("admin-login");
   const dashboardSection = document.getElementById("admin-dashboard");
@@ -445,6 +566,108 @@ import Layout from "../../layouts/Layout.astro";
       productosLoading?.classList.add("hidden");
     }
   }
+
+  const nuevoProductoBtn = document.getElementById("nuevo-producto-btn");
+  const nuevoProductoPanel = document.getElementById("nuevo-producto-panel");
+  const nuevoProductoForm = document.getElementById("nuevo-producto-form") as HTMLFormElement | null;
+  const nuevoProductoCancelar = document.getElementById("nuevo-producto-cancelar");
+  const nuevoProductoSubmit = document.getElementById("nuevo-producto-submit") as HTMLButtonElement | null;
+  const nuevoProductoError = document.getElementById("nuevo-producto-error");
+  const nuevoProductoSuccess = document.getElementById("nuevo-producto-success");
+  const npNombre = document.getElementById("np-nombre") as HTMLInputElement | null;
+  const npSlug = document.getElementById("np-slug") as HTMLInputElement | null;
+
+  let slugEditedManually = false;
+  npSlug?.addEventListener("input", () => {
+    slugEditedManually = true;
+  });
+  npNombre?.addEventListener("input", () => {
+    if (!slugEditedManually && npSlug) npSlug.value = slugify(npNombre.value);
+  });
+
+  function toggleNuevoProductoPanel(show: boolean) {
+    nuevoProductoPanel?.classList.toggle("hidden", !show);
+    nuevoProductoError?.classList.add("hidden");
+    nuevoProductoSuccess?.classList.add("hidden");
+    if (show) return;
+    nuevoProductoForm?.reset();
+    slugEditedManually = false;
+  }
+
+  nuevoProductoBtn?.addEventListener("click", () => toggleNuevoProductoPanel(true));
+  nuevoProductoCancelar?.addEventListener("click", () => toggleNuevoProductoPanel(false));
+
+  nuevoProductoForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    nuevoProductoError?.classList.add("hidden");
+    nuevoProductoSuccess?.classList.add("hidden");
+
+    const nombre = npNombre?.value.trim() ?? "";
+    const slug = npSlug?.value.trim() ?? "";
+    const categoria = (document.getElementById("np-categoria") as HTMLInputElement).value.trim();
+    const categoriasRaw = (document.getElementById("np-categorias") as HTMLInputElement).value;
+    const precio = (document.getElementById("np-precio") as HTMLInputElement).value;
+    const stock = (document.getElementById("np-stock") as HTMLInputElement).value;
+    const emoji = (document.getElementById("np-emoji") as HTMLInputElement).value.trim();
+    const plantillaId = (document.getElementById("np-plantilla") as HTMLSelectElement).value;
+    const descCorta = (document.getElementById("np-desc-corta") as HTMLInputElement).value.trim();
+    const descripcion = (document.getElementById("np-descripcion") as HTMLTextAreaElement).value.trim();
+    const destacado = (document.getElementById("np-destacado") as HTMLInputElement).checked;
+
+    if (!nombre || !slug || !categoria || !precio || !descCorta || !descripcion) {
+      if (nuevoProductoError) {
+        nuevoProductoError.textContent = "Completa los campos obligatorios (*).";
+        nuevoProductoError.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const plantilla = PERSONALIZATION_TEMPLATES.find((t) => t.id === plantillaId);
+    const categorias = categoriasRaw
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean);
+
+    if (nuevoProductoSubmit) {
+      nuevoProductoSubmit.disabled = true;
+      nuevoProductoSubmit.textContent = "Guardando...";
+    }
+
+    try {
+      await createProducto({
+        slug,
+        nombre,
+        categoria,
+        categorias: categorias.length ? categorias : [categoria],
+        precio_base: Math.round(parseFloat(precio || "0") * 100),
+        stock: stock === "" ? null : Number(stock),
+        emoji: emoji || null,
+        descripcion_corta: descCorta,
+        descripcion,
+        destacado,
+        personalizacion: plantilla?.groups ?? [],
+      });
+
+      if (nuevoProductoSuccess) {
+        nuevoProductoSuccess.textContent =
+          "Producto guardado. Aparecerá en la tienda pública después del próximo despliegue del sitio.";
+        nuevoProductoSuccess.classList.remove("hidden");
+      }
+      nuevoProductoForm.reset();
+      slugEditedManually = false;
+      await loadProductos();
+    } catch (err) {
+      if (nuevoProductoError) {
+        nuevoProductoError.textContent = err instanceof Error ? err.message : "No se pudo crear el producto.";
+        nuevoProductoError.classList.remove("hidden");
+      }
+    } finally {
+      if (nuevoProductoSubmit) {
+        nuevoProductoSubmit.disabled = false;
+        nuevoProductoSubmit.textContent = "Guardar y publicar";
+      }
+    }
+  });
 
   let dashboardLoaded = false;
 

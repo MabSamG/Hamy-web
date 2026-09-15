@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import { personalizationBySlug, type PersonalizationGroup } from "./personalization";
+import type { PersonalizationGroup } from "./personalization";
 
 export type { PersonalizationField, PersonalizationFieldType, PersonalizationGroup } from "./personalization";
 
@@ -32,10 +32,11 @@ type ProductoRow = {
   destacado: boolean;
   emoji: string | null;
   imagen_principal: string | null;
+  personalizacion: PersonalizationGroup[] | null;
 };
 
 const PRODUCTO_COLUMNS =
-  "slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, destacado, emoji, imagen_principal";
+  "slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, destacado, emoji, imagen_principal, personalizacion";
 
 function mapRow(row: ProductoRow): Product {
   return {
@@ -49,7 +50,7 @@ function mapRow(row: ProductoRow): Product {
     featured: row.destacado,
     emoji: row.emoji ?? "✨",
     image: row.imagen_principal ?? undefined,
-    personalization: personalizationBySlug[row.slug] ?? [],
+    personalization: row.personalizacion ?? [],
   };
 }
 

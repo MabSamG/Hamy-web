@@ -17,90 +17,75 @@ export type PersonalizationGroup = {
   fields: PersonalizationField[];
 };
 
-/**
- * Form structure per product, keyed by product slug. This is UI shape, not
- * catalog data, so it lives in code rather than in the `productos` table —
- * it decides which inputs render on the product detail page.
- */
-export const personalizationBySlug: Record<string, PersonalizationGroup[]> = {
-  "llavero-de-bebe": [
-    {
-      id: "foto",
-      label: "Foto del bebé",
-      fields: [
-        {
-          id: "foto-bebe",
-          label: "Sube la foto",
-          type: "photo",
-          required: true,
-          helpText: "Preferiblemente con buena luz y fondo sencillo.",
-        },
-      ],
-    },
-    {
-      id: "datos",
-      label: "Datos del bebé",
-      fields: [
-        { id: "nombre", label: "Nombre", type: "text", required: true, maxLength: 30 },
-        { id: "fecha", label: "Fecha de nacimiento", type: "date", required: true },
-        {
-          id: "peso",
-          label: "Peso al nacer",
-          type: "text",
-          required: false,
-          placeholder: "Ej. 3,250 kg",
-        },
-      ],
-    },
-  ],
-  "marcapaginas-personalizado": [
-    {
-      id: "texto",
-      label: "Personalización",
-      fields: [
-        {
-          id: "texto-marcapaginas",
-          label: "Texto o nombre",
-          type: "text",
-          required: true,
-          maxLength: 25,
-          placeholder: "Ej. Marta",
-        },
-      ],
-    },
-  ],
-  "llavero-de-letra": [
-    {
-      id: "texto",
-      label: "Personalización",
-      fields: [
-        {
-          id: "texto-llavero",
-          label: "Letra o nombre corto",
-          type: "text",
-          required: true,
-          maxLength: 10,
-          placeholder: "Ej. M",
-        },
-      ],
-    },
-  ],
-  "corazon-personalizado": [
-    {
-      id: "cara-1",
-      label: "Cara 1",
-      fields: [
-        { id: "cara1-texto", label: "Texto (opcional)", type: "text", required: false, maxLength: 40 },
-        { id: "cara1-foto", label: "Foto (opcional)", type: "photo", required: false },
-      ],
-    },
-    {
-      id: "cara-2",
-      label: "Cara 2",
-      fields: [
-        { id: "cara2-texto", label: "Texto (opcional)", type: "text", required: false, maxLength: 40 },
-        { id: "cara2-foto", label: "Foto (opcional)", type: "photo", required: false },
-      ],
-    },
-  ],
+export type PersonalizationTemplate = {
+  id: string;
+  label: string;
+  groups: PersonalizationGroup[];
 };
+
+/**
+ * Reusable personalization shapes offered when creating a product from the
+ * admin panel. Each product's actual `personalizacion` lives in Supabase
+ * (see supabase/schema.sql) — these templates just seed a new product with
+ * one of the same shapes the 4 existing products already use.
+ */
+export const PERSONALIZATION_TEMPLATES: PersonalizationTemplate[] = [
+  {
+    id: "solo-texto",
+    label: "Solo texto",
+    groups: [
+      {
+        id: "texto",
+        label: "Personalización",
+        fields: [{ id: "texto", label: "Texto o nombre", type: "text", required: true, maxLength: 30 }],
+      },
+    ],
+  },
+  {
+    id: "solo-foto",
+    label: "Solo foto",
+    groups: [
+      {
+        id: "foto",
+        label: "Foto",
+        fields: [{ id: "foto", label: "Sube la foto", type: "photo", required: true }],
+      },
+    ],
+  },
+  {
+    id: "texto-y-foto",
+    label: "Texto y foto",
+    groups: [
+      {
+        id: "personalizacion",
+        label: "Personalización",
+        fields: [
+          { id: "texto", label: "Texto o nombre", type: "text", required: false, maxLength: 30 },
+          { id: "foto", label: "Foto", type: "photo", required: false },
+        ],
+      },
+    ],
+  },
+  {
+    id: "dos-caras",
+    label: "Dos caras (texto y/o foto en cada una)",
+    groups: [
+      {
+        id: "cara-1",
+        label: "Cara 1",
+        fields: [
+          { id: "texto", label: "Texto (opcional)", type: "text", required: false, maxLength: 40 },
+          { id: "foto", label: "Foto (opcional)", type: "photo", required: false },
+        ],
+      },
+      {
+        id: "cara-2",
+        label: "Cara 2",
+        fields: [
+          { id: "texto", label: "Texto (opcional)", type: "text", required: false, maxLength: 40 },
+          { id: "foto", label: "Foto (opcional)", type: "photo", required: false },
+        ],
+      },
+    ],
+  },
+];

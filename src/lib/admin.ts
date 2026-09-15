@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import type { PersonalizationGroup } from "../data/personalization";
 
 export type PedidoEstado = "recibido" | "preparando" | "enviado";
 
@@ -89,4 +90,33 @@ export async function updateProducto(id: string, patch: ProductoUpdate): Promise
 export async function deleteProducto(id: string): Promise<void> {
   const { error } = await supabase.from("productos").delete().eq("id", id);
   if (error) throw new Error(`No se pudo borrar el producto: ${error.message}`);
+}
+
+export function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export type NuevoProducto = {
+  slug: string;
+  nombre: string;
+  categoria: string;
+  categorias: string[];
+  precio_base: number;
+  descripcion_corta: string;
+  descripcion: string;
+  emoji: string | null;
+  stock: number | null;
+  destacado: boolean;
+  personalizacion: PersonalizationGroup[];
+};
+
+export async function createProducto(producto: NuevoProducto): Promise<void> {
+  const { error } = await supabase.from("productos").insert(producto);
+  if (error) throw new Error(`No se pudo crear el producto: ${error.message}`);
 }

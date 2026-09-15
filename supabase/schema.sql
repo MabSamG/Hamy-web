@@ -30,8 +30,16 @@ create table if not exists public.productos (
   imagen_principal text,
   stock integer, -- null = pieza hecha bajo pedido, sin stock fijo
   destacado boolean not null default false,
+  -- Grupos/campos del formulario de personalizacion de este producto (misma
+  -- forma que src/data/personalization.ts: PersonalizationGroup[]). Vive en
+  -- la fila del producto, no en codigo, para que el panel /admin pueda crear
+  -- productos nuevos eligiendo una plantilla sin necesitar un despliegue.
+  personalizacion jsonb not null default '[]'::jsonb,
   creado_en timestamptz not null default now()
 );
+
+-- Para proyectos donde la tabla ya existia antes de esta columna.
+alter table public.productos add column if not exists personalizacion jsonb not null default '[]'::jsonb;
 
 alter table public.productos enable row level security;
 
@@ -145,28 +153,58 @@ create policy "fotos-pedidos: borrado solo admin"
 -- ------------------------------------------------------------
 
 insert into public.productos
-  (slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, destacado)
+  (slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, destacado, personalizacion)
 values
   ('llavero-de-bebe', 'Llavero de bebé', 'recuerdos-personalizados',
    array['recuerdos-personalizados', 'llaveros'], 1200,
    'Un recuerdo tierno con la foto de tu bebé.',
    'Llavero artesanal en resina con la fotografía de tu bebé y sus datos de nacimiento, para llevar ese recuerdo siempre contigo.',
-   '👶', true),
+   '👶', true,
+   '[
+     {"id":"foto","label":"Foto del bebé","fields":[
+       {"id":"foto-bebe","label":"Sube la foto","type":"photo","required":true,"helpText":"Preferiblemente con buena luz y fondo sencillo."}
+     ]},
+     {"id":"datos","label":"Datos del bebé","fields":[
+       {"id":"nombre","label":"Nombre","type":"text","required":true,"maxLength":30},
+       {"id":"fecha","label":"Fecha de nacimiento","type":"date","required":true},
+       {"id":"peso","label":"Peso al nacer","type":"text","required":false,"placeholder":"Ej. 3,250 kg"}
+     ]}
+   ]'::jsonb),
   ('marcapaginas-personalizado', 'Marcapáginas Personalizado', 'puntos-de-libro',
    array['puntos-de-libro'], 800,
    'El punto de libro perfecto con tu nombre o frase favorita.',
    'Marcapáginas de resina hecho a mano, personalizado con el texto que elijas: tu nombre, una frase o una dedicatoria.',
-   '📖', true),
+   '📖', true,
+   '[
+     {"id":"texto","label":"Personalización","fields":[
+       {"id":"texto-marcapaginas","label":"Texto o nombre","type":"text","required":true,"maxLength":25,"placeholder":"Ej. Marta"}
+     ]}
+   ]'::jsonb),
   ('llavero-de-letra', 'Llavero de letra', 'llaveros',
    array['llaveros'], 350,
    'Tu inicial o un nombre corto, en resina y color a elegir.',
    'Llavero de resina con la letra o nombre corto que elijas. Ideal para regalar o combinar con las llaves de toda la familia.',
-   '🔑', true),
+   '🔑', true,
+   '[
+     {"id":"texto","label":"Personalización","fields":[
+       {"id":"texto-llavero","label":"Letra o nombre corto","type":"text","required":true,"maxLength":10,"placeholder":"Ej. M"}
+     ]}
+   ]'::jsonb),
   ('corazon-personalizado', 'Corazón personalizado', 'decoracion',
    array['decoracion', 'recuerdos-personalizados'], 2000,
    'Pieza con soporte y dos caras, cada una a tu gusto.',
    'Corazón de resina con soporte de exhibición. Cada una de sus dos caras se puede personalizar con texto, foto o ambos, para crear una pieza decorativa totalmente única.',
-   '💗', true)
+   '💗', true,
+   '[
+     {"id":"cara-1","label":"Cara 1","fields":[
+       {"id":"cara1-texto","label":"Texto (opcional)","type":"text","required":false,"maxLength":40},
+       {"id":"cara1-foto","label":"Foto (opcional)","type":"photo","required":false}
+     ]},
+     {"id":"cara-2","label":"Cara 2","fields":[
+       {"id":"cara2-texto","label":"Texto (opcional)","type":"text","required":false,"maxLength":40},
+       {"id":"cara2-foto","label":"Foto (opcional)","type":"photo","required":false}
+     ]}
+   ]'::jsonb)
 on conflict (slug) do update set
   nombre = excluded.nombre,
   categoria = excluded.categoria,
@@ -175,4 +213,5 @@ on conflict (slug) do update set
   descripcion_corta = excluded.descripcion_corta,
   descripcion = excluded.descripcion,
   emoji = excluded.emoji,
-  destacado = excluded.destacado;
+  destacado = excluded.destacado,
+  personalizacion = excluded.personalizacion;
