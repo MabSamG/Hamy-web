@@ -2,6 +2,7 @@
 
 @theme {
   --font-display: "Dancing Script", cursive;
+  --font-heading: "Fraunces", "Georgia", serif;
   --font-sans: "Quicksand", "Poppins", sans-serif;
 
   --color-hamy-pink: #ff6f91;

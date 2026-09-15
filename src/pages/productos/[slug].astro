@@ -34,7 +34,7 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
 
       <div>
         {category && <span class="text-xs font-semibold uppercase tracking-wide text-hamy-brown-light">{category.name}</span>}
-        <h1 class="mt-1 font-display text-4xl font-bold text-hamy-brown">{product.name}</h1>
+        <h1 class="mt-1 font-heading text-4xl font-bold text-hamy-brown">{product.name}</h1>
         <p class="mt-2 text-2xl font-bold text-hamy-coral">{formatPrice(product.priceCents)}</p>
         <p class="mt-4 text-hamy-brown-light">{product.description}</p>
 
@@ -50,7 +50,7 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
           {
             product.personalization.map((group) => (
               <fieldset class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
-                <legend class="px-1 font-display text-xl font-bold text-hamy-brown">{group.label}</legend>
+                <legend class="px-1 font-heading text-xl font-bold text-hamy-brown">{group.label}</legend>
                 <div class="mt-3 space-y-4">
                   {group.fields.map((field) => {
                     const inputId = fieldId(group, field);
@@ -138,7 +138,7 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
         </form>
 
         <div id="confirmation" class="mt-8 hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20">
-          <p class="font-display text-lg font-bold text-hamy-brown">✨ ¡Añadido al carrito!</p>
+          <p class="font-heading text-lg font-bold text-hamy-brown">✨ ¡Añadido al carrito!</p>
           <ul id="confirmation-summary" class="mt-3 space-y-1 text-sm text-hamy-brown-light"></ul>
           <div class="mt-4 flex flex-wrap gap-3">
             <a href="/carrito" class="btn-primary">Ver carrito</a>

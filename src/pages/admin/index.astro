@@ -7,7 +7,7 @@ import Layout from "../../layouts/Layout.astro";
     <div id="admin-login" class="mx-auto max-w-sm py-10">
       <div class="text-center">
         <span class="text-4xl" aria-hidden="true">🔐</span>
-        <h1 class="mt-3 font-display text-3xl font-bold text-hamy-brown">Acceso administrador</h1>
+        <h1 class="mt-3 font-heading text-3xl font-bold text-hamy-brown">Acceso administrador</h1>
       </div>
       <form id="login-form" class="mt-6 space-y-3 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20" novalidate>
         <div>
@@ -35,7 +35,7 @@ import Layout from "../../layouts/Layout.astro";
 
     <div id="admin-dashboard" class="hidden">
       <div class="flex flex-wrap items-center justify-between gap-4">
-        <h1 class="font-display text-3xl font-bold text-hamy-brown">Panel de administración</h1>
+        <h1 class="font-heading text-3xl font-bold text-hamy-brown">Panel de administración</h1>
         <button type="button" id="logout-btn" class="btn-secondary">Cerrar sesión</button>
       </div>
 
@@ -138,7 +138,7 @@ import Layout from "../../layouts/Layout.astro";
     dateP.className = "text-xs text-hamy-brown-light";
     dateP.textContent = formatDate(pedido.creado_en);
     const clientP = document.createElement("p");
-    clientP.className = "font-display text-lg font-bold text-hamy-brown";
+    clientP.className = "font-heading text-lg font-bold text-hamy-brown";
     clientP.textContent = `${pedido.cliente_nombre} · ${pedido.cliente_email}`;
     const contactP = document.createElement("p");
     contactP.className = "text-xs text-hamy-brown-light";
@@ -308,7 +308,7 @@ import Layout from "../../layouts/Layout.astro";
     emojiSpan.textContent = producto.emoji ?? "✨";
     const titleWrap = document.createElement("div");
     const titleP = document.createElement("p");
-    titleP.className = "font-display text-lg font-bold text-hamy-brown";
+    titleP.className = "font-heading text-lg font-bold text-hamy-brown";
     titleP.textContent = producto.nombre;
     const slugP = document.createElement("p");
     slugP.className = "text-xs text-hamy-brown-light";
