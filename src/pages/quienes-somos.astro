@@ -2,20 +2,48 @@
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="Quiénes somos" description="Conoce la historia detrás de Hamy, artesanía en resina hecha a mano.">
-  <section class="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6">
-    <img src="/corazon-hamy.png" alt="" aria-hidden="true" class="mx-auto h-16 w-auto" />
-    <h1 class="mt-4 font-heading text-5xl font-bold text-hamy-brown">Nuestra historia</h1>
-    <p class="mt-6 text-lg text-hamy-brown-light">
-      Hamy nació de las ganas de convertir momentos pequeños en recuerdos que se puedan tocar.
-      Todo empezó en casa, con resina, moldes y mucha paciencia, hasta convertirse en un proyecto
-      dedicado a crear piezas únicas para quienes quieren regalar algo con significado.
-    </p>
-    <p class="mt-4 text-lg text-hamy-brown-light">
-      Cada llavero, marcapáginas o pieza decorativa se diseña y se elabora a mano, una a una,
-      cuidando cada detalle para que lo que recibas sea tan especial como la persona a la que
-      se lo vas a regalar.
-    </p>
+<Layout title="Quiénes somos" description="Conoce la historia detrás de Hamy, artesanía en resina hecha a mano entre madre e hija.">
+  <section class="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+    <div class="text-center">
+      <img src="/corazon-hamy.png" alt="" aria-hidden="true" class="mx-auto h-16 w-auto" />
+      <h1 class="mt-4 font-heading text-5xl font-bold text-hamy-brown">Nuestra historia</h1>
+    </div>
+
+    <div class="mt-10 grid gap-10 md:grid-cols-2 md:items-center">
+      <div class="space-y-4 text-lg text-hamy-brown-light">
+        <p>
+          Hamy nació de algo muy sencillo: una madre y una hija que decidieron compartir una afición y convertirla en
+          tiempo juntas.
+        </p>
+        <p>
+          Empezamos formándonos codo con codo, aprendiendo a trabajar la resina paso a paso, probando colores,
+          fallando piezas y celebrando las que sí salían bien. Con el tiempo, esas tardes se convirtieron en nuestro
+          ritual: un espacio donde el vínculo entre madre e hija se fortalece con cada pieza que creamos.
+        </p>
+        <p>
+          Cada llavero, cada marcapáginas, cada recuerdo que sale de nuestras manos lleva un poco de esa complicidad.
+          No es solo un producto — es una tarde compartida, una conversación, una risa mientras esperamos a que el
+          molde cure.
+        </p>
+        <p>
+          Por eso, cuando encargas algo a Hamy, no solo te llevas una pieza artesanal hecha con cuidado: te llevas un
+          pedacito de lo que significa hacer las cosas en familia, con amor y con tiempo.
+        </p>
+      </div>
+
+      <div class="relative aspect-[4/5] overflow-hidden rounded-3xl bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
+        <img
+          src="/images/quienes-somos.jpg"
+          alt="Foto de Hamy: madre e hija trabajando la resina"
+          class="h-full w-full object-cover"
+          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+        />
+        <div class="absolute inset-0 flex-col items-center justify-center gap-2 text-center text-hamy-brown-light" style="display:none">
+          <span class="text-4xl" aria-hidden="true">📷</span>
+          <span class="px-8 text-sm font-semibold">Foto próximamente</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="bg-hamy-cream-dark/60 py-14">
