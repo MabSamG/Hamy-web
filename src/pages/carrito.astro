@@ -2,14 +2,302 @@
 import Layout from "../layouts/Layout.astro";
 ---
 
-<Layout title="Carrito" description="Revisa tu pedido antes de finalizar la compra.">
-  <section class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
-    <span class="text-5xl" aria-hidden="true">🛒</span>
-    <h1 class="mt-4 font-display text-4xl font-bold text-hamy-brown">Tu carrito</h1>
-    <p class="mt-4 text-hamy-brown-light">
-      Aquí verás el resumen de tu pedido y podrás pagar de forma segura con Stripe.
-      Esta sección se conectará al carrito y al checkout en el siguiente paso del proyecto.
-    </p>
-    <a href="/productos" class="btn-primary mt-8 inline-flex">Seguir comprando</a>
+<Layout title="Carrito" description="Revisa tu pedido personalizado antes de confirmarlo.">
+  <section class="mx-auto max-w-5xl px-4 py-14 sm:px-6">
+    <h1 class="font-display text-4xl font-bold text-hamy-brown">Tu carrito</h1>
+
+    <div id="cart-empty" class="mt-10 hidden text-center">
+      <span class="text-5xl" aria-hidden="true">🛒</span>
+      <p class="mt-4 text-hamy-brown-light">Tu carrito está vacío.</p>
+      <a href="/productos" class="btn-primary mt-6 inline-flex">Ver productos</a>
+    </div>
+
+    <div id="cart-content" class="mt-10 hidden grid gap-8 lg:grid-cols-[1.6fr_1fr]">
+      <ul id="cart-items" class="space-y-4"></ul>
+
+      <div class="h-fit rounded-3xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20">
+        <h2 class="font-display text-xl font-bold text-hamy-brown">Resumen</h2>
+        <div class="mt-4 flex items-center justify-between text-sm text-hamy-brown-light">
+          <span>Artículos</span>
+          <span id="cart-count">0</span>
+        </div>
+        <div class="mt-2 flex items-center justify-between text-lg font-bold text-hamy-brown">
+          <span>Total</span>
+          <span id="cart-total">0,00 €</span>
+        </div>
+
+        <form id="checkout-form" class="mt-6 space-y-3 border-t border-hamy-pink-light/20 pt-5" novalidate>
+          <div>
+            <label for="cliente-nombre" class="block text-sm font-semibold text-hamy-brown">Nombre *</label>
+            <input
+              id="cliente-nombre"
+              type="text"
+              required
+              class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="cliente-email" class="block text-sm font-semibold text-hamy-brown">Email *</label>
+            <input
+              id="cliente-email"
+              type="email"
+              required
+              class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="cliente-telefono" class="block text-sm font-semibold text-hamy-brown">Teléfono</label>
+            <input
+              id="cliente-telefono"
+              type="tel"
+              class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            />
+          </div>
+          <div>
+            <label for="cliente-direccion" class="block text-sm font-semibold text-hamy-brown">Dirección de envío</label>
+            <textarea
+              id="cliente-direccion"
+              rows="2"
+              class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            ></textarea>
+          </div>
+          <div>
+            <label for="cliente-notas" class="block text-sm font-semibold text-hamy-brown">Notas (opcional)</label>
+            <textarea
+              id="cliente-notas"
+              rows="2"
+              class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            ></textarea>
+          </div>
+
+          <p id="checkout-error" class="hidden text-sm font-semibold text-red-500"></p>
+
+          <button type="submit" id="checkout-submit" class="btn-primary w-full justify-center">Confirmar pedido</button>
+          <p class="text-xs text-hamy-brown-light">
+            El pago online (Stripe) se activará próximamente. Al confirmar guardamos tu pedido y te contactaremos para coordinar el pago.
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <div id="cart-success" class="mt-10 hidden rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-hamy-pink-light/20">
+      <span class="text-5xl" aria-hidden="true">🎉</span>
+      <h2 class="mt-4 font-display text-2xl font-bold text-hamy-brown">¡Pedido recibido!</h2>
+      <p class="mt-2 text-hamy-brown-light">
+        Referencia: <span id="success-order-id" class="font-semibold text-hamy-coral"></span>
+      </p>
+      <p class="mt-2 text-sm text-hamy-brown-light">Te contactaremos en breve para confirmar los detalles y el pago.</p>
+      <a href="/productos" class="btn-secondary mt-6 inline-flex">Seguir comprando</a>
+    </div>
   </section>
 </Layout>
+
+<script>
+  import { getCart, removeFromCart, clearCart, type CartItem } from "../lib/cart";
+  import { formatPrice } from "../data/products";
+  import { supabase } from "../lib/supabase";
+
+  const emptyEl = document.getElementById("cart-empty");
+  const contentEl = document.getElementById("cart-content");
+  const successEl = document.getElementById("cart-success");
+  const itemsList = document.getElementById("cart-items");
+  const countEl = document.getElementById("cart-count");
+  const totalEl = document.getElementById("cart-total");
+  const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
+  const checkoutError = document.getElementById("checkout-error");
+  const checkoutSubmit = document.getElementById("checkout-submit") as HTMLButtonElement | null;
+
+  let currentItems: CartItem[] = [];
+
+  function findFirstPhoto(item: CartItem): File | null {
+    for (const group of Object.values(item.personalization)) {
+      for (const field of Object.values(group.fields)) {
+        if (field.value instanceof File) return field.value;
+      }
+    }
+    return null;
+  }
+
+  function renderItem(item: CartItem): HTMLElement {
+    const li = document.createElement("li");
+    li.className = "flex gap-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-hamy-pink-light/20";
+
+    const thumb = document.createElement("div");
+    thumb.className =
+      "flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15 text-3xl";
+    const photo = findFirstPhoto(item);
+    if (photo) {
+      const img = document.createElement("img");
+      img.className = "h-full w-full object-cover";
+      img.alt = "";
+      img.src = URL.createObjectURL(photo);
+      thumb.appendChild(img);
+    } else {
+      thumb.textContent = item.emoji;
+    }
+
+    const info = document.createElement("div");
+    info.className = "min-w-0 flex-1";
+
+    const header = document.createElement("div");
+    header.className = "flex items-start justify-between gap-2";
+    const title = document.createElement("p");
+    title.className = "font-display text-lg font-bold text-hamy-brown";
+    title.textContent = item.productName;
+    const price = document.createElement("p");
+    price.className = "shrink-0 font-semibold text-hamy-coral";
+    price.textContent = formatPrice(item.priceCents);
+    header.append(title, price);
+
+    const details = document.createElement("ul");
+    details.className = "mt-1 space-y-0.5 text-xs text-hamy-brown-light";
+    for (const group of Object.values(item.personalization)) {
+      for (const field of Object.values(group.fields)) {
+        const detailItem = document.createElement("li");
+        const value = field.value instanceof File ? field.value.name : field.value || "(sin especificar)";
+        detailItem.textContent = `${group.groupLabel} · ${field.label}: ${value}`;
+        details.appendChild(detailItem);
+      }
+    }
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "mt-2 text-xs font-semibold text-red-500 hover:underline";
+    removeBtn.textContent = "Quitar";
+    removeBtn.addEventListener("click", async () => {
+      await removeFromCart(item.id);
+      await loadCart();
+    });
+
+    info.append(header, details, removeBtn);
+    li.append(thumb, info);
+    return li;
+  }
+
+  async function loadCart() {
+    currentItems = await getCart();
+
+    if (currentItems.length === 0) {
+      emptyEl?.classList.remove("hidden");
+      contentEl?.classList.add("hidden");
+      successEl?.classList.add("hidden");
+      return;
+    }
+
+    emptyEl?.classList.add("hidden");
+    successEl?.classList.add("hidden");
+    contentEl?.classList.remove("hidden");
+
+    if (itemsList) {
+      itemsList.innerHTML = "";
+      currentItems.forEach((item) => itemsList.appendChild(renderItem(item)));
+    }
+
+    const total = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
+    if (countEl) countEl.textContent = String(currentItems.length);
+    if (totalEl) totalEl.textContent = formatPrice(total);
+  }
+
+  function showCheckoutError(message: string) {
+    if (!checkoutError) return;
+    checkoutError.textContent = message;
+    checkoutError.classList.remove("hidden");
+  }
+
+  function clearCheckoutError() {
+    checkoutError?.classList.add("hidden");
+    if (checkoutError) checkoutError.textContent = "";
+  }
+
+  checkoutForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    clearCheckoutError();
+
+    const nombre = (document.getElementById("cliente-nombre") as HTMLInputElement).value.trim();
+    const email = (document.getElementById("cliente-email") as HTMLInputElement).value.trim();
+    const telefono = (document.getElementById("cliente-telefono") as HTMLInputElement).value.trim();
+    const direccion = (document.getElementById("cliente-direccion") as HTMLTextAreaElement).value.trim();
+    const notas = (document.getElementById("cliente-notas") as HTMLTextAreaElement).value.trim();
+
+    if (!nombre || !email) {
+      showCheckoutError("Completa tu nombre y email para confirmar el pedido.");
+      return;
+    }
+    if (currentItems.length === 0) {
+      showCheckoutError("Tu carrito está vacío.");
+      return;
+    }
+
+    if (checkoutSubmit) {
+      checkoutSubmit.disabled = true;
+      checkoutSubmit.textContent = "Enviando...";
+    }
+
+    try {
+      const pedidoId = crypto.randomUUID();
+
+      const items = [];
+      for (const item of currentItems) {
+        const personalizacion: Record<string, unknown> = {};
+
+        for (const [groupId, group] of Object.entries(item.personalization)) {
+          const campos: Record<string, unknown> = {};
+
+          for (const [fieldId, entry] of Object.entries(group.fields)) {
+            if (entry.value instanceof File) {
+              const path = `${pedidoId}/${item.id}-${groupId}-${fieldId}-${entry.value.name}`;
+              const { error: uploadError } = await supabase.storage.from("fotos-pedidos").upload(path, entry.value);
+              if (uploadError) throw new Error(`No se pudo subir la foto "${entry.value.name}": ${uploadError.message}`);
+              campos[fieldId] = { label: entry.label, foto: path };
+            } else {
+              campos[fieldId] = { label: entry.label, valor: entry.value };
+            }
+          }
+
+          personalizacion[groupId] = { label: group.groupLabel, campos };
+        }
+
+        items.push({
+          producto_slug: item.productSlug,
+          producto_nombre: item.productName,
+          cantidad: 1,
+          precio_unitario_cents: item.priceCents,
+          personalizacion,
+        });
+      }
+
+      const totalCents = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
+
+      const { error: insertError } = await supabase.from("pedidos").insert({
+        id: pedidoId,
+        cliente_nombre: nombre,
+        cliente_email: email,
+        cliente_telefono: telefono || null,
+        cliente_direccion: direccion || null,
+        items,
+        total_cents: totalCents,
+        notas: notas || null,
+      });
+
+      if (insertError) throw new Error(insertError.message);
+
+      await clearCart();
+
+      const successOrderId = document.getElementById("success-order-id");
+      if (successOrderId) successOrderId.textContent = pedidoId.slice(0, 8).toUpperCase();
+
+      contentEl?.classList.add("hidden");
+      successEl?.classList.remove("hidden");
+      successEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      showCheckoutError(err instanceof Error ? err.message : "No se pudo confirmar el pedido. Inténtalo de nuevo.");
+    } finally {
+      if (checkoutSubmit) {
+        checkoutSubmit.disabled = false;
+        checkoutSubmit.textContent = "Confirmar pedido";
+      }
+    }
+  });
+
+  loadCart();
+</script>

@@ -38,7 +38,15 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
         <p class="mt-2 text-2xl font-bold text-hamy-coral">{formatPrice(product.priceCents)}</p>
         <p class="mt-4 text-hamy-brown-light">{product.description}</p>
 
-        <form id="personalization-form" class="mt-8 space-y-6" novalidate>
+        <form
+          id="personalization-form"
+          class="mt-8 space-y-6"
+          novalidate
+          data-product-slug={product.slug}
+          data-product-name={product.name}
+          data-price-cents={product.priceCents}
+          data-emoji={product.emoji}
+        >
           {
             product.personalization.map((group) => (
               <fieldset class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
@@ -47,7 +55,14 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
                   {group.fields.map((field) => {
                     const inputId = fieldId(group, field);
                     return (
-                      <div class="field" data-label={field.label} data-field-required={field.required ? "true" : "false"}>
+                      <div
+                        class="field"
+                        data-group={group.id}
+                        data-group-label={group.label}
+                        data-field={field.id}
+                        data-label={field.label}
+                        data-field-required={field.required ? "true" : "false"}
+                      >
                         <label for={inputId} class="block text-sm font-semibold text-hamy-brown">
                           {field.label}
                           {field.required && <span class="text-hamy-coral"> *</span>}
@@ -123,13 +138,15 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
         </form>
 
         <div id="confirmation" class="mt-8 hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20">
-          <p class="font-display text-lg font-bold text-hamy-brown">✨ ¡Personalización guardada!</p>
+          <p class="font-display text-lg font-bold text-hamy-brown">✨ ¡Añadido al carrito!</p>
           <ul id="confirmation-summary" class="mt-3 space-y-1 text-sm text-hamy-brown-light"></ul>
-          <p class="mt-4 text-xs text-hamy-brown-light">
-            El carrito y el pago se activarán en el siguiente paso del proyecto. Por ahora, apunta tu pedido y
-            <a href="/contacto" class="font-semibold text-hamy-coral hover:underline">contáctanos</a> si quieres confirmarlo ya.
-          </p>
-          <a href="/productos" class="btn-secondary mt-4 inline-flex">Seguir comprando</a>
+          <div class="mt-4 flex flex-wrap gap-3">
+            <a href="/carrito" class="btn-primary">Ver carrito</a>
+            <a href="/productos" class="btn-secondary">Seguir comprando</a>
+            <button type="button" id="add-another" class="text-sm font-semibold text-hamy-coral hover:underline">
+              Personalizar otra unidad
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -137,9 +154,12 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
 </Layout>
 
 <script>
+  import { addToCart, type CartItemPersonalization } from "../../lib/cart";
+
   const form = document.getElementById("personalization-form") as HTMLFormElement | null;
   const confirmation = document.getElementById("confirmation");
   const summaryList = document.getElementById("confirmation-summary");
+  const addAnotherBtn = document.getElementById("add-another");
 
   function showError(input: HTMLInputElement) {
     input.classList.add("border-red-400");
@@ -192,9 +212,33 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
     input.addEventListener("input", () => clearError(input));
   });
 
-  form?.addEventListener("submit", (e) => {
+  function resetPreviews() {
+    form?.querySelectorAll<HTMLImageElement>('img[id$="-preview"]').forEach((img) => {
+      img.removeAttribute("src");
+      img.classList.add("hidden");
+    });
+    form?.querySelectorAll<HTMLElement>('span[id$="-placeholder"]').forEach((span) => span.classList.remove("hidden"));
+  }
+
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     if (!validate() || !form) return;
+
+    const personalization: CartItemPersonalization = {};
+    form.querySelectorAll<HTMLElement>(".field").forEach((wrapper) => {
+      const input = wrapper.querySelector<HTMLInputElement>("input");
+      if (!input) return;
+      const groupId = wrapper.dataset.group ?? "";
+      const groupLabel = wrapper.dataset.groupLabel ?? "";
+      const fieldId = wrapper.dataset.field ?? "";
+      const fieldLabel = wrapper.dataset.label ?? "";
+      const value = input.type === "file" ? input.files?.[0] ?? null : input.value.trim() || null;
+
+      if (!personalization[groupId]) {
+        personalization[groupId] = { groupLabel, fields: {} };
+      }
+      personalization[groupId].fields[fieldId] = { label: fieldLabel, value };
+    });
 
     if (summaryList) {
       summaryList.innerHTML = "";
@@ -209,8 +253,23 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
       });
     }
 
+    await addToCart({
+      productSlug: form.dataset.productSlug ?? "",
+      productName: form.dataset.productName ?? "",
+      priceCents: Number(form.dataset.priceCents ?? 0),
+      emoji: form.dataset.emoji ?? "✨",
+      personalization,
+    });
+
+    form.reset();
+    resetPreviews();
     form.classList.add("hidden");
     confirmation?.classList.remove("hidden");
     confirmation?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  addAnotherBtn?.addEventListener("click", () => {
+    confirmation?.classList.add("hidden");
+    form?.classList.remove("hidden");
   });
 </script>
