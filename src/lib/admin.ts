@@ -85,3 +85,8 @@ export async function updateProducto(id: string, patch: ProductoUpdate): Promise
   const { error } = await supabase.from("productos").update(patch).eq("id", id);
   if (error) throw new Error(`No se pudo guardar el producto: ${error.message}`);
 }
+
+export async function deleteProducto(id: string): Promise<void> {
+  const { error } = await supabase.from("productos").delete().eq("id", id);
+  if (error) throw new Error(`No se pudo borrar el producto: ${error.message}`);
+}

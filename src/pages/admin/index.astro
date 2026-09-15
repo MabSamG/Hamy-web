@@ -74,6 +74,7 @@ import Layout from "../../layouts/Layout.astro";
     getFotoUrl,
     listProductosAdmin,
     updateProducto,
+    deleteProducto,
     type Pedido,
     type PedidoEstado,
     type ProductoAdmin,
@@ -404,7 +405,24 @@ import Layout from "../../layouts/Layout.astro";
       }
     });
 
-    footer.append(saveBtn, savedLabel, errorLabel);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "ml-auto text-sm font-semibold text-red-500 hover:underline";
+    deleteBtn.textContent = "🗑️ Borrar";
+    deleteBtn.addEventListener("click", async () => {
+      const confirmed = confirm(`¿Estás seguro de que quieres borrar "${producto.nombre}"? Esta acción no se puede deshacer.`);
+      if (!confirmed) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteProducto(producto.id);
+        li.remove();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo borrar el producto.");
+        deleteBtn.disabled = false;
+      }
+    });
+
+    footer.append(saveBtn, savedLabel, errorLabel, deleteBtn);
     li.appendChild(footer);
 
     return li;
