@@ -1,0 +1,172 @@
+---
+import Layout from "../layouts/Layout.astro";
+import CategoryCard from "../components/CategoryCard.astro";
+import ProductCard from "../components/ProductCard.astro";
+import { categories } from "../data/categories";
+import { products } from "../data/products";
+
+const featuredProducts = products.filter((p) => p.featured);
+
+const steps = [
+  {
+    title: "Elige tu pieza",
+    text: "Explora el catálogo y elige el diseño que más te enamore.",
+    emoji: "🛍️",
+  },
+  {
+    title: "Personalízala",
+    text: "Añade tu foto, nombre o fecha especial en el formulario del pedido.",
+    emoji: "🎨",
+  },
+  {
+    title: "La creamos a mano",
+    text: "Preparamos tu pieza en resina, con mimo y con calma.",
+    emoji: "🫧",
+  },
+  {
+    title: "La recibes en casa",
+    text: "Empaquetada con cariño y lista para regalar o guardar.",
+    emoji: "📦",
+  },
+];
+
+const trustBadges = [
+  { emoji: "🤍", text: "Hecho a mano" },
+  { emoji: "🚚", text: "Envíos a toda España" },
+  { emoji: "✨", text: "Piezas personalizadas" },
+  { emoji: "🔒", text: "Pago 100% seguro" },
+];
+---
+
+<Layout title="Inicio">
+  <!-- Hero -->
+  <section class="relative overflow-hidden">
+    <div
+      class="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-hamy-pink/20 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+    <div
+      class="pointer-events-none absolute -right-20 top-32 h-80 w-80 rounded-full bg-hamy-orange/20 blur-3xl"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div class="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
+      <div>
+        <span class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-hamy-coral shadow-sm ring-1 ring-hamy-pink-light/30">
+          🤍 Hecho a mano con amor
+        </span>
+        <h1 class="mt-5 font-display text-5xl font-bold leading-tight text-hamy-brown sm:text-6xl">
+          Recuerdos <span class="text-gradient-hamy">únicos</span> en resina
+        </h1>
+        <p class="mt-5 max-w-md text-lg text-hamy-brown-light">
+          Llaveros, marcapáginas, decoración y regalos personalizados creados a mano, pieza a pieza,
+          para guardar tus momentos más especiales.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-4">
+          <a href="/productos" class="btn-primary">Ver productos</a>
+          <a href="/quienes-somos" class="btn-secondary">Conócenos</a>
+        </div>
+      </div>
+
+      <div class="relative mx-auto flex aspect-square w-full max-w-sm items-center justify-center">
+        <div class="absolute inset-0 rounded-[3rem] bg-gradient-to-br from-hamy-pink via-hamy-coral to-hamy-orange opacity-90 shadow-2xl shadow-hamy-coral/30">
+        </div>
+        <div class="relative flex flex-col items-center gap-2 text-white">
+          <span class="text-7xl" aria-hidden="true">💞</span>
+          <span class="font-display text-2xl font-semibold">Piezas hechas a mano</span>
+        </div>
+        <span
+          class="absolute -bottom-4 -left-4 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-hamy-brown shadow-lg"
+        >
+          🔑 Llavero de letra · 3,50€
+        </span>
+        <span
+          class="absolute -right-3 -top-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-hamy-brown shadow-lg"
+        >
+          💗 100% personalizable
+        </span>
+      </div>
+    </div>
+
+    <!-- Trust strip -->
+    <div class="border-y border-hamy-pink-light/30 bg-white/60">
+      <div class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-6 sm:px-6 md:grid-cols-4">
+        {
+          trustBadges.map((badge) => (
+            <div class="flex items-center justify-center gap-2 text-center text-sm font-semibold text-hamy-brown">
+              <span aria-hidden="true">{badge.emoji}</span>
+              <span>{badge.text}</span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Categorías -->
+  <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <div class="mx-auto max-w-xl text-center">
+      <h2 class="font-display text-4xl font-bold text-hamy-brown">Explora por categoría</h2>
+      <p class="mt-3 text-hamy-brown-light">Encuentra la pieza perfecta para cada ocasión.</p>
+    </div>
+    <div class="mt-10 grid grid-cols-2 gap-5 md:grid-cols-4">
+      {categories.map((category) => <CategoryCard category={category} />)}
+    </div>
+  </section>
+
+  <!-- Productos destacados -->
+  <section class="bg-hamy-cream-dark/60 py-16">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 class="font-display text-4xl font-bold text-hamy-brown">Nuestros favoritos</h2>
+          <p class="mt-3 text-hamy-brown-light">Los diseños que más enamoran a nuestros clientes.</p>
+        </div>
+        <a href="/productos" class="btn-secondary">Ver todo el catálogo</a>
+      </div>
+      <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {featuredProducts.map((product) => <ProductCard product={product} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- Cómo funciona -->
+  <section class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+    <div class="mx-auto max-w-xl text-center">
+      <h2 class="font-display text-4xl font-bold text-hamy-brown">Cómo funciona</h2>
+      <p class="mt-3 text-hamy-brown-light">De tu idea a tu casa, en cuatro sencillos pasos.</p>
+    </div>
+    <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-4">
+      {
+        steps.map((step, i) => (
+          <div class="relative rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-hamy-pink-light/20">
+            <span class="absolute -top-3 left-1/2 flex h-7 w-7 -translate-x-1/2 items-center justify-center rounded-full bg-gradient-hamy text-xs font-bold text-white shadow-md">
+              {i + 1}
+            </span>
+            <span class="text-4xl" aria-hidden="true">{step.emoji}</span>
+            <h3 class="mt-3 font-display text-xl font-bold text-hamy-brown">{step.title}</h3>
+            <p class="mt-2 text-sm text-hamy-brown-light">{step.text}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <!-- CTA final -->
+  <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+    <div class="flex flex-col items-center gap-5 rounded-[2.5rem] bg-gradient-hamy px-6 py-14 text-center shadow-xl shadow-hamy-coral/30">
+      <h2 class="font-display text-3xl font-bold text-white sm:text-4xl">¿Tienes una idea en mente?</h2>
+      <p class="max-w-lg text-white/90">
+        Creamos piezas a medida para regalos, eventos y momentos especiales. Cuéntanos qué imaginas.
+      </p>
+      <a
+        href="/contacto"
+        class="rounded-full bg-white px-6 py-3 font-semibold text-hamy-coral shadow-md transition-transform hover:scale-[1.03]"
+      >
+        Hablemos por WhatsApp
+      </a>
+    </div>
+  </section>
+</Layout>

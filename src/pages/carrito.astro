@@ -1,0 +1,15 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Carrito" description="Revisa tu pedido antes de finalizar la compra.">
+  <section class="mx-auto max-w-2xl px-4 py-20 text-center sm:px-6">
+    <span class="text-5xl" aria-hidden="true">🛒</span>
+    <h1 class="mt-4 font-display text-4xl font-bold text-hamy-brown">Tu carrito</h1>
+    <p class="mt-4 text-hamy-brown-light">
+      Aquí verás el resumen de tu pedido y podrás pagar de forma segura con Stripe.
+      Esta sección se conectará al carrito y al checkout en el siguiente paso del proyecto.
+    </p>
+    <a href="/productos" class="btn-primary mt-8 inline-flex">Seguir comprando</a>
+  </section>
+</Layout>

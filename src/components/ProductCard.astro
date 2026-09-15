@@ -1,0 +1,40 @@
+---
+import type { Product } from "../data/products";
+import { formatPrice } from "../data/products";
+import { getCategory } from "../data/categories";
+
+interface Props {
+  product: Product;
+}
+
+const { product } = Astro.props;
+const category = getCategory(product.category);
+const isPersonalizable = product.personalization.length > 0;
+---
+
+<article class="group flex flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-hamy-pink-light/20 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-hamy-coral/10">
+  <div class="relative flex aspect-square items-center justify-center bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
+    <span class="text-6xl transition-transform duration-200 group-hover:scale-110" aria-hidden="true">{product.emoji}</span>
+    {
+      isPersonalizable && (
+        <span class="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-hamy-coral shadow-sm">
+          ✨ Personalizable
+        </span>
+      )
+    }
+  </div>
+  <div class="flex flex-1 flex-col gap-2 p-5">
+    {category && <span class="text-xs font-semibold uppercase tracking-wide text-hamy-brown-light">{category.name}</span>}
+    <h3 class="font-display text-2xl font-bold text-hamy-brown">{product.name}</h3>
+    <p class="flex-1 text-sm text-hamy-brown-light">{product.shortDescription}</p>
+    <div class="mt-2 flex items-center justify-between">
+      <span class="text-lg font-bold text-hamy-coral">{formatPrice(product.priceCents)}</span>
+      <a
+        href={`/productos#${product.slug}`}
+        class="rounded-full border-2 border-hamy-coral px-4 py-1.5 text-sm font-semibold text-hamy-coral transition-colors hover:bg-hamy-coral hover:text-white"
+      >
+        Ver más
+      </a>
+    </div>
+  </div>
+</article>

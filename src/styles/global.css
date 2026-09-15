@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Dancing Script", cursive;
+  --font-sans: "Quicksand", "Poppins", sans-serif;
+
+  --color-hamy-pink: #ff6f91;
+  --color-hamy-pink-light: #ffb3c6;
+  --color-hamy-coral: #ff7e67;
+  --color-hamy-orange: #ffa45b;
+  --color-hamy-cream: #fff8f3;
+  --color-hamy-cream-dark: #fdeee2;
+  --color-hamy-brown: #6b4226;
+  --color-hamy-brown-light: #9c6b4f;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-hamy-cream text-hamy-brown font-sans;
+  }
+}
+
+@layer utilities {
+  .text-gradient-hamy {
+    @apply bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange bg-clip-text text-transparent;
+  }
+
+  .bg-gradient-hamy {
+    @apply bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange px-6 py-3 font-semibold text-white shadow-md shadow-hamy-coral/30 transition-transform duration-200 hover:scale-[1.03] hover:shadow-lg hover:shadow-hamy-coral/40;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-hamy-coral px-6 py-3 font-semibold text-hamy-coral transition-colors duration-200 hover:bg-hamy-coral hover:text-white;
+  }
+}

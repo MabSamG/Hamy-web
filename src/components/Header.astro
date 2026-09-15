@@ -1,0 +1,78 @@
+---
+const navLinks = [
+  { href: "/", label: "Inicio" },
+  { href: "/quienes-somos", label: "Quiénes somos" },
+  { href: "/productos", label: "Productos" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/contacto", label: "Contacto" },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header class="sticky top-0 z-50 border-b border-hamy-pink-light/30 bg-hamy-cream/90 backdrop-blur">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+    <a href="/" class="flex items-center gap-2 shrink-0">
+      <span aria-hidden="true" class="text-2xl">💞</span>
+      <span class="font-display text-3xl font-bold text-gradient-hamy">Hamy</span>
+    </a>
+
+    <nav class="hidden items-center gap-7 md:flex">
+      {
+        navLinks.map((link) => (
+          <a
+            href={link.href}
+            class:list={[
+              "text-sm font-semibold transition-colors hover:text-hamy-coral",
+              currentPath === link.href ? "text-hamy-coral" : "text-hamy-brown",
+            ]}
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="flex items-center gap-3">
+      <a
+        href="/carrito"
+        class="relative flex h-10 w-10 items-center justify-center rounded-full border border-hamy-pink-light/50 text-hamy-brown transition-colors hover:border-hamy-coral hover:text-hamy-coral"
+        aria-label="Ver carrito"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 1.972-4.694 2.545-7.162a1.125 1.125 0 00-1.11-1.337H5.106M7.5 14.25L5.106 5.288M7.5 14.25L5.25 21m12-6.75L19.5 21M9 21a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm9 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+        </svg>
+      </a>
+
+      <input type="checkbox" id="menu-toggle" class="peer hidden" />
+      <label
+        for="menu-toggle"
+        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-hamy-brown md:hidden"
+        aria-label="Abrir menú"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+        </svg>
+      </label>
+
+      <nav
+        id="mobile-menu"
+        class="fixed inset-x-0 top-[60px] hidden flex-col gap-1 border-b border-hamy-pink-light/30 bg-hamy-cream px-4 py-4 shadow-lg peer-checked:flex md:hidden"
+      >
+        {
+          navLinks.map((link) => (
+            <a
+              href={link.href}
+              class:list={[
+                "rounded-lg px-3 py-2.5 text-sm font-semibold",
+                currentPath === link.href ? "bg-hamy-cream-dark text-hamy-coral" : "text-hamy-brown",
+              ]}
+            >
+              {link.label}
+            </a>
+          ))
+        }
+      </nav>
+    </div>
+  </div>
+</header>

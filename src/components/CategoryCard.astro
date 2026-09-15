@@ -1,0 +1,23 @@
+---
+import type { Category } from "../data/categories";
+
+interface Props {
+  category: Category;
+}
+
+const { category } = Astro.props;
+---
+
+<a
+  href={`/productos?categoria=${category.slug}`}
+  class="group flex flex-col items-center gap-3 rounded-3xl bg-white p-6 text-center shadow-sm ring-1 ring-hamy-pink-light/20 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:shadow-hamy-coral/10"
+>
+  <span
+    class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-hamy-pink via-hamy-coral to-hamy-orange text-3xl shadow-md shadow-hamy-coral/30 transition-transform duration-200 group-hover:scale-110"
+    aria-hidden="true"
+  >
+    {category.emoji}
+  </span>
+  <h3 class="font-display text-xl font-bold text-hamy-brown">{category.name}</h3>
+  <p class="text-sm text-hamy-brown-light">{category.description}</p>
+</a>

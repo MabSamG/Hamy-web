@@ -1,0 +1,93 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import { categories } from "../../data/categories";
+import { products } from "../../data/products";
+---
+
+<Layout title="Productos" description="Catálogo completo de artesanía en resina hecha a mano: llaveros, marcapáginas, decoración y recuerdos personalizados.">
+  <section class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+    <div class="mx-auto max-w-xl text-center">
+      <h1 class="font-display text-5xl font-bold text-hamy-brown">Nuestros productos</h1>
+      <p class="mt-3 text-hamy-brown-light">
+        Cada pieza se hace a mano y a tu medida. Elige una categoría para filtrar el catálogo.
+      </p>
+    </div>
+
+    <div id="filters" class="mt-8 flex flex-wrap justify-center gap-3">
+      <button
+        type="button"
+        data-filter="all"
+        class="filter-btn rounded-full border-2 border-hamy-coral bg-hamy-coral px-5 py-2 text-sm font-semibold text-white"
+      >
+        Todos
+      </button>
+      {
+        categories.map((category) => (
+          <button
+            type="button"
+            data-filter={category.slug}
+            class="filter-btn rounded-full border-2 border-hamy-coral px-5 py-2 text-sm font-semibold text-hamy-coral transition-colors hover:bg-hamy-coral hover:text-white"
+          >
+            {category.emoji} {category.name}
+          </button>
+        ))
+      }
+    </div>
+
+    <div id="product-grid" class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      {
+        products.map((product) => (
+          <div id={product.slug} class="product-item" data-categories={product.categories.join(",")}>
+            <ProductCard product={product} />
+          </div>
+        ))
+      }
+    </div>
+
+    <p id="empty-state" class="mt-10 hidden text-center text-hamy-brown-light">
+      Aún no tenemos productos en esta categoría, ¡vuelve pronto!
+    </p>
+  </section>
+</Layout>
+
+<script>
+  function applyFilter(filter: string) {
+    const items = document.querySelectorAll<HTMLElement>(".product-item");
+    let visibleCount = 0;
+
+    items.forEach((item) => {
+      const cats = (item.dataset.categories || "").split(",");
+      const show = filter === "all" || cats.includes(filter);
+      item.classList.toggle("hidden", !show);
+      if (show) visibleCount++;
+    });
+
+    document.getElementById("empty-state")?.classList.toggle("hidden", visibleCount > 0);
+
+    document.querySelectorAll<HTMLElement>(".filter-btn").forEach((btn) => {
+      const active = btn.dataset.filter === filter;
+      btn.classList.toggle("bg-hamy-coral", active);
+      btn.classList.toggle("text-white", active);
+      btn.classList.toggle("text-hamy-coral", !active);
+    });
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const initialFilter = params.get("categoria") || "all";
+  applyFilter(initialFilter);
+
+  document.querySelectorAll<HTMLButtonElement>(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const filter = btn.dataset.filter || "all";
+      const url = new URL(window.location.href);
+      if (filter === "all") {
+        url.searchParams.delete("categoria");
+      } else {
+        url.searchParams.set("categoria", filter);
+      }
+      window.history.replaceState({}, "", url);
+      applyFilter(filter);
+    });
+  });
+</script>
