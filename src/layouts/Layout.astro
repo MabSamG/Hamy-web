@@ -6,11 +6,14 @@ import Footer from "../components/Footer.astro";
 interface Props {
   title: string;
   description?: string;
+  /** Only set on product detail pages — used to log a "producto_vista" analytics event. */
+  productoSlug?: string;
 }
 
 const {
   title,
   description = "Hamy — artesanía y recuerdos únicos hechos a mano en resina: llaveros, marcapáginas, decoración y regalos personalizados.",
+  productoSlug,
 } = Astro.props;
 ---
 
@@ -30,7 +33,7 @@ const {
     />
     <title>{title} · Hamy</title>
   </head>
-  <body class="flex min-h-screen flex-col">
+  <body class="flex min-h-screen flex-col" data-producto-slug={productoSlug}>
     <Header />
     <main class="flex-1">
       <slot />
@@ -38,3 +41,13 @@ const {
     <Footer />
   </body>
 </html>
+
+<script>
+  import { trackPageView } from "../lib/analytics";
+
+  const path = window.location.pathname;
+  if (!path.startsWith("/admin")) {
+    const productoSlug = document.body.dataset.productoSlug ?? null;
+    trackPageView(path, productoSlug);
+  }
+</script>

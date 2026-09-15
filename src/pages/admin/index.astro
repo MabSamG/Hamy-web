@@ -51,6 +51,13 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         >
           Catálogo
         </button>
+        <button
+          type="button"
+          data-tab="estadisticas"
+          class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
+        >
+          Estadísticas
+        </button>
       </div>
 
       <div id="tab-pedidos" class="tab-panel mt-6">
@@ -180,6 +187,43 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
         <ul id="productos-list" class="mt-6 space-y-4"></ul>
       </div>
+
+      <div id="tab-estadisticas" class="tab-panel mt-6 hidden">
+        <p id="estadisticas-loading" class="text-hamy-brown-light">Cargando estadísticas...</p>
+        <p id="estadisticas-error" class="hidden text-sm font-semibold text-red-500"></p>
+
+        <div id="estadisticas-content" class="hidden">
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+              <p class="text-xs font-semibold uppercase tracking-wide text-hamy-brown-light">Visitas hoy</p>
+              <p id="stat-hoy" class="mt-1 font-heading text-3xl font-bold text-hamy-coral">0</p>
+            </div>
+            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+              <p class="text-xs font-semibold uppercase tracking-wide text-hamy-brown-light">Visitas esta semana</p>
+              <p id="stat-semana" class="mt-1 font-heading text-3xl font-bold text-hamy-coral">0</p>
+            </div>
+            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+              <p class="text-xs font-semibold uppercase tracking-wide text-hamy-brown-light">Visitas este mes</p>
+              <p id="stat-mes" class="mt-1 font-heading text-3xl font-bold text-hamy-coral">0</p>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+              <h3 class="font-heading text-lg font-bold text-hamy-brown">Productos más vistos</h3>
+              <p class="text-xs text-hamy-brown-light">Últimos 30 días</p>
+              <ol id="stat-productos-top" class="mt-3 space-y-2 text-sm text-hamy-brown"></ol>
+              <p id="stat-productos-vacio" class="hidden text-sm text-hamy-brown-light">Todavía no hay visitas a productos.</p>
+            </div>
+
+            <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+              <h3 class="font-heading text-lg font-bold text-hamy-brown">Tiempo medio de estancia</h3>
+              <p class="text-xs text-hamy-brown-light">Últimos 30 días</p>
+              <p id="stat-duracion" class="mt-3 font-heading text-3xl font-bold text-hamy-coral">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 </Layout>
@@ -195,6 +239,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     deleteProducto,
     createProducto,
     slugify,
+    listAnalyticsRecientes,
     type Pedido,
     type PedidoEstado,
     type ProductoAdmin,
@@ -218,6 +263,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   const tabPanels: Record<string, HTMLElement | null> = {
     pedidos: document.getElementById("tab-pedidos"),
     productos: document.getElementById("tab-productos"),
+    estadisticas: document.getElementById("tab-estadisticas"),
   };
 
   tabButtons.forEach((btn) => {
@@ -231,6 +277,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         b.classList.toggle("text-hamy-brown-light", !active);
       });
       Object.entries(tabPanels).forEach(([key, panel]) => panel?.classList.toggle("hidden", key !== tab));
+      if (tab === "estadisticas") loadEstadisticas();
     });
   });
 
@@ -549,11 +596,14 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     return li;
   }
 
+  let productosCache: ProductoAdmin[] = [];
+
   async function loadProductos() {
     if (!productosList) return;
     productosLoading?.classList.remove("hidden");
     try {
       const productos = await listProductosAdmin();
+      productosCache = productos;
       productosList.innerHTML = "";
       productos.forEach((producto) => productosList.appendChild(renderProducto(producto)));
     } catch (err) {
@@ -564,6 +614,105 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       productosList.appendChild(errorP);
     } finally {
       productosLoading?.classList.add("hidden");
+    }
+  }
+
+  const estadisticasLoading = document.getElementById("estadisticas-loading");
+  const estadisticasError = document.getElementById("estadisticas-error");
+  const estadisticasContent = document.getElementById("estadisticas-content");
+  let estadisticasLoaded = false;
+
+  function startOf(daysAgo: number): number {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - daysAgo);
+    return d.getTime();
+  }
+
+  async function loadEstadisticas(force = false) {
+    if (estadisticasLoaded && !force) return;
+    estadisticasLoading?.classList.remove("hidden");
+    estadisticasError?.classList.add("hidden");
+    estadisticasContent?.classList.add("hidden");
+
+    try {
+      const eventos = await listAnalyticsRecientes();
+      estadisticasLoaded = true;
+
+      const inicioHoy = startOf(0);
+      const inicioSemana = startOf(6);
+      const inicioMes = startOf(29);
+
+      let hoy = 0;
+      let semana = 0;
+      let mes = 0;
+      const porProducto = new Map<string, number>();
+      let duracionTotal = 0;
+      let duracionCuenta = 0;
+
+      for (const evento of eventos) {
+        const ts = new Date(evento.creado_en).getTime();
+        if (ts >= inicioMes) mes++;
+        if (ts >= inicioSemana) semana++;
+        if (ts >= inicioHoy) hoy++;
+
+        if (evento.tipo === "producto_vista" && evento.producto_slug) {
+          porProducto.set(evento.producto_slug, (porProducto.get(evento.producto_slug) ?? 0) + 1);
+        }
+
+        if (typeof evento.duracion_ms === "number") {
+          duracionTotal += evento.duracion_ms;
+          duracionCuenta++;
+        }
+      }
+
+      const statHoy = document.getElementById("stat-hoy");
+      const statSemana = document.getElementById("stat-semana");
+      const statMes = document.getElementById("stat-mes");
+      if (statHoy) statHoy.textContent = String(hoy);
+      if (statSemana) statSemana.textContent = String(semana);
+      if (statMes) statMes.textContent = String(mes);
+
+      const topList = document.getElementById("stat-productos-top");
+      const topEmpty = document.getElementById("stat-productos-vacio");
+      if (topList) {
+        topList.innerHTML = "";
+        const ranking = [...porProducto.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
+        topEmpty?.classList.toggle("hidden", ranking.length > 0);
+        ranking.forEach(([slug, count]) => {
+          const nombre = productosCache.find((p) => p.slug === slug)?.nombre ?? slug;
+          const li = document.createElement("li");
+          li.className = "flex items-center justify-between gap-3";
+          const nameSpan = document.createElement("span");
+          nameSpan.textContent = nombre;
+          const countSpan = document.createElement("span");
+          countSpan.className = "font-semibold text-hamy-coral";
+          countSpan.textContent = String(count);
+          li.append(nameSpan, countSpan);
+          topList.appendChild(li);
+        });
+      }
+
+      const statDuracion = document.getElementById("stat-duracion");
+      if (statDuracion) {
+        if (duracionCuenta === 0) {
+          statDuracion.textContent = "—";
+        } else {
+          const mediaSegundos = Math.round(duracionTotal / duracionCuenta / 1000);
+          const mins = Math.floor(mediaSegundos / 60);
+          const secs = mediaSegundos % 60;
+          statDuracion.textContent = mins > 0 ? `${mins} min ${secs} s` : `${secs} s`;
+        }
+      }
+
+      estadisticasContent?.classList.remove("hidden");
+    } catch (err) {
+      if (estadisticasError) {
+        estadisticasError.textContent = err instanceof Error ? err.message : "No se pudieron cargar las estadísticas.";
+        estadisticasError.classList.remove("hidden");
+      }
+    } finally {
+      estadisticasLoading?.classList.add("hidden");
     }
   }
 

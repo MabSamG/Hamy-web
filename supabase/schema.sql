@@ -215,3 +215,44 @@ on conflict (slug) do update set
   emoji = excluded.emoji,
   destacado = excluded.destacado,
   personalizacion = excluded.personalizacion;
+
+-- ------------------------------------------------------------
+-- 5. ANALYTICS — visitas propias, sin depender de terceros (GA, etc.)
+-- ------------------------------------------------------------
+
+create table if not exists public.analytics_eventos (
+  id uuid primary key default gen_random_uuid(),
+  tipo text not null check (tipo in ('pagina_vista', 'producto_vista')),
+  ruta text not null,
+  producto_slug text,
+  duracion_ms integer, -- se rellena al salir de la pagina, puede quedar null
+  creado_en timestamptz not null default now()
+);
+
+create index if not exists analytics_eventos_creado_en_idx on public.analytics_eventos (creado_en desc);
+create index if not exists analytics_eventos_producto_slug_idx on public.analytics_eventos (producto_slug) where producto_slug is not null;
+
+alter table public.analytics_eventos enable row level security;
+
+-- Cualquier visitante (sin login) registra su propia visita y, al salir,
+-- actualiza esa misma fila con cuanto tiempo estuvo. Sin datos personales:
+-- ni IP, ni user agent, ni identificador de visitante.
+drop policy if exists "analytics: registro publico" on public.analytics_eventos;
+create policy "analytics: registro publico"
+  on public.analytics_eventos for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "analytics: actualizacion publica de duracion" on public.analytics_eventos;
+create policy "analytics: actualizacion publica de duracion"
+  on public.analytics_eventos for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+-- Solo el admin autenticado puede leer las estadisticas agregadas.
+drop policy if exists "analytics: lectura solo admin" on public.analytics_eventos;
+create policy "analytics: lectura solo admin"
+  on public.analytics_eventos for select
+  to authenticated
+  using (true);

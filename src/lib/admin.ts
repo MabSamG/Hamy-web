@@ -120,3 +120,25 @@ export async function createProducto(producto: NuevoProducto): Promise<void> {
   const { error } = await supabase.from("productos").insert(producto);
   if (error) throw new Error(`No se pudo crear el producto: ${error.message}`);
 }
+
+export type AnalyticsEvento = {
+  id: string;
+  tipo: "pagina_vista" | "producto_vista";
+  ruta: string;
+  producto_slug: string | null;
+  duracion_ms: number | null;
+  creado_en: string;
+};
+
+/** Last 30 days only, capped at 5000 rows — enough for a small store's "estadísticas sencillas". */
+export async function listAnalyticsRecientes(): Promise<AnalyticsEvento[]> {
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("analytics_eventos")
+    .select("id, tipo, ruta, producto_slug, duracion_ms, creado_en")
+    .gte("creado_en", since)
+    .order("creado_en", { ascending: false })
+    .limit(5000);
+  if (error) throw new Error(`No se pudieron cargar las estadísticas: ${error.message}`);
+  return (data ?? []) as AnalyticsEvento[];
+}
