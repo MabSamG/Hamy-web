@@ -2,9 +2,10 @@
 import Layout from "../layouts/Layout.astro";
 import CategoryCard from "../components/CategoryCard.astro";
 import ProductCard from "../components/ProductCard.astro";
-import { categories } from "../data/categories";
+import { getCategories } from "../data/categories";
 import { getProducts } from "../data/products";
 
+const categories = await getCategories();
 const products = await getProducts();
 const featuredProducts = products.filter((p) => p.featured);
 
@@ -128,7 +129,7 @@ const trustBadges = [
         <a href="/productos" class="btn-secondary">Ver todo el catálogo</a>
       </div>
       <div class="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {featuredProducts.map((product) => <ProductCard product={product} />)}
+        {featuredProducts.map((product) => <ProductCard product={product} category={categories.find((c) => c.slug === product.category)} />)}
       </div>
     </div>
   </section>

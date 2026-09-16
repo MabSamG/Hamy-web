@@ -14,7 +14,47 @@
 create extension if not exists pgcrypto;
 
 -- ------------------------------------------------------------
--- 1. PRODUCTOS — catalogo publico
+-- 1. CATEGORIAS — categorias del catalogo, editables desde /admin
+--    (crear una nueva categoria al añadir un producto la guarda aqui,
+--    y la web publica las lee de esta tabla, sin tocar codigo)
+-- ------------------------------------------------------------
+
+create table if not exists public.categorias (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  nombre text not null,
+  descripcion text not null default '',
+  emoji text not null default '✨',
+  creado_en timestamptz not null default now()
+);
+
+alter table public.categorias enable row level security;
+
+drop policy if exists "categorias: lectura publica" on public.categorias;
+create policy "categorias: lectura publica"
+  on public.categorias for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "categorias: escritura solo admin" on public.categorias;
+create policy "categorias: escritura solo admin"
+  on public.categorias for all
+  to authenticated
+  using (true)
+  with check (true);
+
+insert into public.categorias (slug, nombre, descripcion, emoji) values
+  ('llaveros', 'Llaveros', 'Pequeños detalles para llevar siempre contigo.', '🔑'),
+  ('puntos-de-libro', 'Puntos de libro', 'Marcapáginas únicos para los amantes de la lectura.', '📖'),
+  ('decoracion', 'Decoración', 'Piezas artesanales para dar vida a tus espacios.', '🏡'),
+  ('recuerdos-personalizados', 'Recuerdos personalizados', 'Momentos únicos convertidos en piezas para siempre.', '💞')
+on conflict (slug) do update set
+  nombre = excluded.nombre,
+  descripcion = excluded.descripcion,
+  emoji = excluded.emoji;
+
+-- ------------------------------------------------------------
+-- 2. PRODUCTOS — catalogo publico
 -- ------------------------------------------------------------
 
 create table if not exists public.productos (
@@ -58,7 +98,7 @@ create policy "productos: escritura solo admin"
   with check (true);
 
 -- ------------------------------------------------------------
--- 2. PEDIDOS — cada pedido con su personalizacion en JSON
+-- 3. PEDIDOS — cada pedido con su personalizacion en JSON
 -- ------------------------------------------------------------
 
 create table if not exists public.pedidos (
@@ -115,7 +155,7 @@ create policy "pedidos: actualizacion solo admin"
   with check (true);
 
 -- ------------------------------------------------------------
--- 3. STORAGE — fotos que suben los clientes al personalizar
+-- 4. STORAGE — fotos que suben los clientes al personalizar
 -- ------------------------------------------------------------
 
 insert into storage.buckets (id, name, public)
@@ -149,7 +189,7 @@ create policy "fotos-pedidos: borrado solo admin"
   using (bucket_id = 'fotos-pedidos');
 
 -- ------------------------------------------------------------
--- 4. SEED — catalogo actual (los 4 productos ya construidos)
+-- 5. SEED — catalogo actual (los 4 productos ya construidos)
 -- ------------------------------------------------------------
 
 insert into public.productos
@@ -165,9 +205,15 @@ values
        {"id":"foto-bebe","label":"Sube la foto","type":"photo","required":true,"helpText":"Preferiblemente con buena luz y fondo sencillo."}
      ]},
      {"id":"datos","label":"Datos del bebé","fields":[
-       {"id":"nombre","label":"Nombre","type":"text","required":true,"maxLength":30},
+       {"id":"color","label":"Color","type":"text","required":true,"maxLength":30,"placeholder":"Ej. Rosa pastel"},
+       {"id":"hora","label":"Hora de nacimiento","type":"time","required":true},
        {"id":"fecha","label":"Fecha de nacimiento","type":"date","required":true},
-       {"id":"peso","label":"Peso al nacer","type":"text","required":false,"placeholder":"Ej. 3,250 kg"}
+       {"id":"nombre","label":"Nombre","type":"text","required":true,"maxLength":30},
+       {"id":"talla","label":"Talla al nacer (cm)","type":"text","required":true,"maxLength":10,"placeholder":"Ej. 50 cm"},
+       {"id":"peso","label":"Peso al nacer","type":"text","required":true,"maxLength":10,"placeholder":"Ej. 3,250 kg"}
+     ]},
+     {"id":"notas","label":"Notas adicionales","fields":[
+       {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
    ]'::jsonb),
   ('marcapaginas-personalizado', 'Marcapáginas Personalizado', 'puntos-de-libro',
@@ -176,8 +222,12 @@ values
    'Marcapáginas de resina hecho a mano, personalizado con el texto que elijas: tu nombre, una frase o una dedicatoria.',
    '📖', true,
    '[
-     {"id":"texto","label":"Personalización","fields":[
-       {"id":"texto-marcapaginas","label":"Texto o nombre","type":"text","required":true,"maxLength":25,"placeholder":"Ej. Marta"}
+     {"id":"personalizacion","label":"Personalización","fields":[
+       {"id":"color","label":"Color","type":"text","required":true,"maxLength":30,"placeholder":"Ej. Coral"},
+       {"id":"texto","label":"Texto","type":"text","required":true,"maxLength":25,"placeholder":"Ej. Marta"}
+     ]},
+     {"id":"notas","label":"Notas adicionales","fields":[
+       {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
    ]'::jsonb),
   ('llavero-de-letra', 'Llavero de letra', 'llaveros',
@@ -186,8 +236,13 @@ values
    'Llavero de resina con la letra o nombre corto que elijas. Ideal para regalar o combinar con las llaves de toda la familia.',
    '🔑', true,
    '[
-     {"id":"texto","label":"Personalización","fields":[
-       {"id":"texto-llavero","label":"Letra o nombre corto","type":"text","required":true,"maxLength":10,"placeholder":"Ej. M"}
+     {"id":"personalizacion","label":"Personalización","fields":[
+       {"id":"letra","label":"Letra (forma del llavero)","type":"text","required":true,"maxLength":5,"placeholder":"Ej. M"},
+       {"id":"nombre","label":"Nombre","type":"text","required":true,"maxLength":30,"placeholder":"Texto que irá dentro del llavero"},
+       {"id":"color","label":"Color","type":"text","required":true,"maxLength":30,"placeholder":"Ej. Dorado"}
+     ]},
+     {"id":"notas","label":"Notas adicionales","fields":[
+       {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
    ]'::jsonb),
   ('corazon-personalizado', 'Corazón personalizado', 'decoracion',
@@ -196,13 +251,14 @@ values
    'Corazón de resina con soporte de exhibición. Cada una de sus dos caras se puede personalizar con texto, foto o ambos, para crear una pieza decorativa totalmente única.',
    '💗', true,
    '[
-     {"id":"cara-1","label":"Cara 1","fields":[
-       {"id":"cara1-texto","label":"Texto (opcional)","type":"text","required":false,"maxLength":40},
-       {"id":"cara1-foto","label":"Foto (opcional)","type":"photo","required":false}
+     {"id":"personalizacion","label":"Personalización","fields":[
+       {"id":"parte-delantera","label":"Parte delantera","type":"text","required":true,"maxLength":40,"placeholder":"Texto para la parte delantera"},
+       {"id":"parte-trasera","label":"Parte trasera","type":"text","required":true,"maxLength":40,"placeholder":"Texto para la parte trasera"},
+       {"id":"imagen","label":"Imagen","type":"photo","required":true},
+       {"id":"colores","label":"Colores","type":"text","required":true,"maxLength":40,"placeholder":"Ej. Rosa y dorado"}
      ]},
-     {"id":"cara-2","label":"Cara 2","fields":[
-       {"id":"cara2-texto","label":"Texto (opcional)","type":"text","required":false,"maxLength":40},
-       {"id":"cara2-foto","label":"Foto (opcional)","type":"photo","required":false}
+     {"id":"notas","label":"Notas adicionales","fields":[
+       {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
    ]'::jsonb)
 on conflict (slug) do update set
@@ -217,7 +273,7 @@ on conflict (slug) do update set
   personalizacion = excluded.personalizacion;
 
 -- ------------------------------------------------------------
--- 5. ANALYTICS — visitas propias, sin depender de terceros (GA, etc.)
+-- 6. ANALYTICS — visitas propias, sin depender de terceros (GA, etc.)
 -- ------------------------------------------------------------
 
 create table if not exists public.analytics_eventos (

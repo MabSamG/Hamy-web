@@ -1,9 +1,10 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import ProductCard from "../../components/ProductCard.astro";
-import { categories } from "../../data/categories";
+import { getCategories } from "../../data/categories";
 import { getProducts } from "../../data/products";
 
+const categories = await getCategories();
 const products = await getProducts();
 ---
 
@@ -41,7 +42,7 @@ const products = await getProducts();
       {
         products.map((product) => (
           <div id={product.slug} class="product-item" data-categories={product.categories.join(",")}>
-            <ProductCard product={product} />
+            <ProductCard product={product} category={categories.find((c) => c.slug === product.category)} />
           </div>
         ))
       }

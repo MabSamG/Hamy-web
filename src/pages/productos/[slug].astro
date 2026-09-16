@@ -2,6 +2,7 @@
 import Layout from "../../layouts/Layout.astro";
 import { getProducts, formatPrice, type Product, type PersonalizationGroup, type PersonalizationField } from "../../data/products";
 import { getCategory } from "../../data/categories";
+import { getProductPhotoUrl } from "../../lib/productPhotos";
 
 interface Props {
   product: Product;
@@ -16,7 +17,8 @@ export async function getStaticPaths() {
 }
 
 const { product } = Astro.props;
-const category = getCategory(product.category);
+const category = await getCategory(product.category);
+const photoUrl = getProductPhotoUrl(product.slug);
 
 function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
   return `${group.id}-${field.id}`;
@@ -28,8 +30,14 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
     <a href="/productos" class="text-sm font-semibold text-hamy-coral hover:underline">&larr; Volver a productos</a>
 
     <div class="mt-6 grid gap-10 lg:grid-cols-2">
-      <div class="flex aspect-square items-center justify-center rounded-3xl bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
-        <span class="text-9xl" aria-hidden="true">{product.emoji}</span>
+      <div class="flex aspect-square items-center justify-center overflow-hidden rounded-3xl bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
+        {
+          photoUrl ? (
+            <img src={photoUrl} alt={product.name} class="h-full w-full object-cover" />
+          ) : (
+            <span class="text-9xl" aria-hidden="true">{product.emoji}</span>
+          )
+        }
       </div>
 
       <div>
@@ -37,6 +45,9 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
         <h1 class="mt-1 font-heading text-4xl font-bold text-hamy-brown">{product.name}</h1>
         <p class="mt-2 text-2xl font-bold text-hamy-coral">{formatPrice(product.priceCents)}</p>
         <p class="mt-4 text-hamy-brown-light">{product.description}</p>
+        <p class="mt-2 text-xs italic text-hamy-brown-light/70">
+          Cada pieza está hecha a mano de forma individual, así que pueden darse pequeñas variaciones en el acabado o el color respecto a las fotos.
+        </p>
 
         <form
           id="personalization-form"
@@ -86,6 +97,16 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
                             id={inputId}
                             name={inputId}
                             type="date"
+                            required={field.required}
+                            class="mt-1.5 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-4 py-2.5 text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                          />
+                        )}
+
+                        {field.type === "time" && (
+                          <input
+                            id={inputId}
+                            name={inputId}
+                            type="time"
                             required={field.required}
                             class="mt-1.5 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-4 py-2.5 text-hamy-brown focus:border-hamy-coral focus:outline-none"
                           />
@@ -208,7 +229,7 @@ function fieldId(group: PersonalizationGroup, field: PersonalizationField) {
     });
   });
 
-  form?.querySelectorAll<HTMLInputElement>('input[type="text"], input[type="date"], input[type="number"]').forEach((input) => {
+  form?.querySelectorAll<HTMLInputElement>('input[type="text"], input[type="date"], input[type="time"], input[type="number"]').forEach((input) => {
     input.addEventListener("input", () => clearError(input));
   });
 

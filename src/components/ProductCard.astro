@@ -1,20 +1,28 @@
 ---
 import type { Product } from "../data/products";
 import { formatPrice } from "../data/products";
-import { getCategory } from "../data/categories";
+import type { Category } from "../data/categories";
+import { getProductPhotoUrl } from "../lib/productPhotos";
 
 interface Props {
   product: Product;
+  category?: Category;
 }
 
-const { product } = Astro.props;
-const category = getCategory(product.category);
+const { product, category } = Astro.props;
 const isPersonalizable = product.personalization.length > 0;
+const photoUrl = getProductPhotoUrl(product.slug);
 ---
 
 <article class="group flex flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-hamy-pink-light/20 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-hamy-coral/10">
-  <div class="relative flex aspect-square items-center justify-center bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
-    <span class="text-6xl transition-transform duration-200 group-hover:scale-110" aria-hidden="true">{product.emoji}</span>
+  <div class="relative flex aspect-square items-center justify-center overflow-hidden bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
+    {
+      photoUrl ? (
+        <img src={photoUrl} alt={product.name} class="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" />
+      ) : (
+        <span class="text-6xl transition-transform duration-200 group-hover:scale-110" aria-hidden="true">{product.emoji}</span>
+      )
+    }
     {
       isPersonalizable && (
         <span class="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-hamy-coral shadow-sm">

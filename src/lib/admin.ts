@@ -121,6 +121,45 @@ export async function createProducto(producto: NuevoProducto): Promise<void> {
   if (error) throw new Error(`No se pudo crear el producto: ${error.message}`);
 }
 
+export type CategoriaAdmin = {
+  id: string;
+  slug: string;
+  nombre: string;
+  descripcion: string;
+  emoji: string;
+};
+
+export async function listCategoriasAdmin(): Promise<CategoriaAdmin[]> {
+  const { data, error } = await supabase
+    .from("categorias")
+    .select("id, slug, nombre, descripcion, emoji")
+    .order("creado_en", { ascending: true });
+  if (error) throw new Error(`No se pudieron cargar las categorías: ${error.message}`);
+  return (data ?? []) as CategoriaAdmin[];
+}
+
+export type NuevaCategoria = {
+  slug: string;
+  nombre: string;
+  descripcion?: string;
+  emoji?: string;
+};
+
+export async function createCategoria(categoria: NuevaCategoria): Promise<void> {
+  const { error } = await supabase.from("categorias").insert({
+    slug: categoria.slug,
+    nombre: categoria.nombre,
+    descripcion: categoria.descripcion ?? "",
+    emoji: categoria.emoji ?? "✨",
+  });
+  if (error) throw new Error(`No se pudo crear la categoría: ${error.message}`);
+}
+
+export async function deleteCategoria(id: string): Promise<void> {
+  const { error } = await supabase.from("categorias").delete().eq("id", id);
+  if (error) throw new Error(`No se pudo borrar la categoría: ${error.message}`);
+}
+
 export type AnalyticsEvento = {
   id: string;
   tipo: "pagina_vista" | "producto_vista";

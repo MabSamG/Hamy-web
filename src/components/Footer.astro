@@ -1,6 +1,7 @@
 ---
-import { categories } from "../data/categories";
+import { getCategories } from "../data/categories";
 
+const categories = await getCategories();
 const year = new Date().getFullYear();
 
 const legalLinks = [

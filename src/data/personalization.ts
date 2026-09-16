@@ -1,4 +1,4 @@
-export type PersonalizationFieldType = "text" | "photo" | "date" | "number";
+export type PersonalizationFieldType = "text" | "photo" | "date" | "time" | "number";
 
 export type PersonalizationField = {
   id: string;

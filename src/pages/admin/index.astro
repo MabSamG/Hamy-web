@@ -72,6 +72,14 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
           <button type="button" id="nuevo-producto-btn" class="btn-primary ml-auto">+ Añadir producto</button>
         </div>
 
+        <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+          <h3 class="font-heading text-lg font-bold text-hamy-brown">Categorías</h3>
+          <p class="text-xs text-hamy-brown-light">
+            Borrar una categoría no borra los productos que la usan, pero dejarán de mostrar esa etiqueta y de aparecer en su filtro hasta que les asignes otra.
+          </p>
+          <ul id="categorias-list" class="mt-3 flex flex-wrap gap-2"></ul>
+        </div>
+
         <div id="nuevo-producto-panel" class="mt-4 hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
           <h3 class="font-heading text-lg font-bold text-hamy-brown">Nuevo producto</h3>
           <form id="nuevo-producto-form" class="mt-4 grid gap-3 sm:grid-cols-2" novalidate>
@@ -98,13 +106,35 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
             </p>
             <label class="block text-xs font-semibold text-hamy-brown">
               Categoría principal *
-              <input
+              <select
                 id="np-categoria"
-                type="text"
                 required
                 class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
-              />
+              >
+                <option value="" disabled selected>Cargando categorías...</option>
+                <option value="__nueva__">+ Crear nueva categoría</option>
+              </select>
             </label>
+            <div id="np-categoria-nueva-wrap" class="hidden grid gap-3 sm:col-span-2 sm:grid-cols-[2fr_1fr]">
+              <label class="block text-xs font-semibold text-hamy-brown">
+                Nombre de la nueva categoría *
+                <input
+                  id="np-categoria-nueva"
+                  type="text"
+                  placeholder="Ej. Imanes"
+                  class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                />
+              </label>
+              <label class="block text-xs font-semibold text-hamy-brown">
+                Emoji (opcional)
+                <input
+                  id="np-categoria-nueva-emoji"
+                  type="text"
+                  placeholder="🏷️"
+                  class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                />
+              </label>
+            </div>
             <label class="block text-xs font-semibold text-hamy-brown">
               Categorías (separadas por coma)
               <input
@@ -193,7 +223,10 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         <p id="estadisticas-error" class="hidden text-sm font-semibold text-red-500"></p>
 
         <div id="estadisticas-content" class="hidden">
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div class="flex justify-end">
+            <button type="button" id="descargar-csv-btn" class="btn-secondary">⬇️ Descargar CSV de esta semana</button>
+          </div>
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div class="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
               <p class="text-xs font-semibold uppercase tracking-wide text-hamy-brown-light">Visitas hoy</p>
               <p id="stat-hoy" class="mt-1 font-heading text-3xl font-bold text-hamy-coral">0</p>
@@ -240,9 +273,14 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     createProducto,
     slugify,
     listAnalyticsRecientes,
+    listCategoriasAdmin,
+    createCategoria,
+    deleteCategoria,
     type Pedido,
     type PedidoEstado,
     type ProductoAdmin,
+    type AnalyticsEvento,
+    type CategoriaAdmin,
   } from "../../lib/admin";
   import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
@@ -597,6 +635,68 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   }
 
   let productosCache: ProductoAdmin[] = [];
+  let categoriasCache: CategoriaAdmin[] = [];
+
+  function renderCategoriaPill(categoria: CategoriaAdmin): HTMLElement {
+    const li = document.createElement("li");
+    li.className = "flex items-center gap-2 rounded-full bg-hamy-cream-dark px-3 py-1.5 text-sm text-hamy-brown";
+
+    const label = document.createElement("span");
+    label.textContent = `${categoria.emoji} ${categoria.nombre}`;
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "font-bold text-red-500 hover:text-red-600";
+    deleteBtn.setAttribute("aria-label", `Borrar categoría ${categoria.nombre}`);
+    deleteBtn.textContent = "✕";
+    deleteBtn.addEventListener("click", async () => {
+      const enUso = productosCache.filter((p) => p.categoria === categoria.slug || p.categorias.includes(categoria.slug));
+      const mensaje =
+        enUso.length > 0
+          ? `${enUso.length} producto(s) usan "${categoria.nombre}" (${enUso.map((p) => p.nombre).join(", ")}). Si la borras dejarán de mostrar esa etiqueta y de aparecer en ese filtro. ¿Borrar de todas formas?`
+          : `¿Borrar la categoría "${categoria.nombre}"? Aparecerá borrada en la tienda pública tras el próximo despliegue.`;
+      if (!confirm(mensaje)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteCategoria(categoria.id);
+        await loadCategorias();
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo borrar la categoría.");
+        deleteBtn.disabled = false;
+      }
+    });
+
+    li.append(label, deleteBtn);
+    return li;
+  }
+
+  async function loadCategorias() {
+    const npCategoriaSelect = document.getElementById("np-categoria") as HTMLSelectElement | null;
+    const categoriasListEl = document.getElementById("categorias-list");
+    try {
+      categoriasCache = await listCategoriasAdmin();
+
+      if (npCategoriaSelect) {
+        const nuevaOption = npCategoriaSelect.querySelector('option[value="__nueva__"]');
+        npCategoriaSelect.querySelectorAll('option:not([value="__nueva__"])').forEach((opt) => opt.remove());
+        categoriasCache.forEach((categoria) => {
+          const option = document.createElement("option");
+          option.value = categoria.slug;
+          option.textContent = `${categoria.emoji} ${categoria.nombre}`;
+          npCategoriaSelect.insertBefore(option, nuevaOption);
+        });
+        npCategoriaSelect.value = categoriasCache[0]?.slug ?? "__nueva__";
+        npCategoriaSelect.dispatchEvent(new Event("change"));
+      }
+
+      if (categoriasListEl) {
+        categoriasListEl.innerHTML = "";
+        categoriasCache.forEach((categoria) => categoriasListEl.appendChild(renderCategoriaPill(categoria)));
+      }
+    } catch (err) {
+      // Best-effort: si falla, el desplegable solo ofrecerá "+ Crear nueva categoría".
+    }
+  }
 
   async function loadProductos() {
     if (!productosList) return;
@@ -621,6 +721,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   const estadisticasError = document.getElementById("estadisticas-error");
   const estadisticasContent = document.getElementById("estadisticas-content");
   let estadisticasLoaded = false;
+  let eventosCache: AnalyticsEvento[] = [];
 
   function startOf(daysAgo: number): number {
     const d = new Date();
@@ -637,6 +738,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
     try {
       const eventos = await listAnalyticsRecientes();
+      eventosCache = eventos;
       estadisticasLoaded = true;
 
       const inicioHoy = startOf(0);
@@ -716,6 +818,58 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     }
   }
 
+  function csvEscape(value: string): string {
+    return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+  }
+
+  function descargarCsvSemana() {
+    const inicioSemana = startOf(6);
+    const eventosSemana = eventosCache.filter((e) => new Date(e.creado_en).getTime() >= inicioSemana);
+
+    const porProducto = new Map<string, number>();
+    let duracionTotal = 0;
+    let duracionCuenta = 0;
+    for (const evento of eventosSemana) {
+      if (evento.tipo === "producto_vista" && evento.producto_slug) {
+        porProducto.set(evento.producto_slug, (porProducto.get(evento.producto_slug) ?? 0) + 1);
+      }
+      if (typeof evento.duracion_ms === "number") {
+        duracionTotal += evento.duracion_ms;
+        duracionCuenta++;
+      }
+    }
+    const duracionMediaSegundos = duracionCuenta > 0 ? Math.round(duracionTotal / duracionCuenta / 1000) : 0;
+    const ranking = [...porProducto.entries()].sort((a, b) => b[1] - a[1]);
+
+    const lines: string[] = [];
+    lines.push("Resumen semana actual");
+    lines.push("Métrica,Valor");
+    lines.push(`Visitas totales,${eventosSemana.length}`);
+    lines.push(`Tiempo medio de estancia (segundos),${duracionMediaSegundos}`);
+    lines.push("");
+    lines.push("Productos más vistos,Visitas");
+    if (ranking.length === 0) {
+      lines.push("(sin visitas a productos esta semana),0");
+    } else {
+      for (const [slug, count] of ranking) {
+        const nombre = productosCache.find((p) => p.slug === slug)?.nombre ?? slug;
+        lines.push(`${csvEscape(nombre)},${count}`);
+      }
+    }
+
+    const blob = new Blob([`﻿${lines.join("\n")}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hamy-estadisticas-semana-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById("descargar-csv-btn")?.addEventListener("click", descargarCsvSemana);
+
   const nuevoProductoBtn = document.getElementById("nuevo-producto-btn");
   const nuevoProductoPanel = document.getElementById("nuevo-producto-panel");
   const nuevoProductoForm = document.getElementById("nuevo-producto-form") as HTMLFormElement | null;
@@ -725,6 +879,15 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   const nuevoProductoSuccess = document.getElementById("nuevo-producto-success");
   const npNombre = document.getElementById("np-nombre") as HTMLInputElement | null;
   const npSlug = document.getElementById("np-slug") as HTMLInputElement | null;
+  const npCategoria = document.getElementById("np-categoria") as HTMLSelectElement | null;
+  const npCategoriaNuevaWrap = document.getElementById("np-categoria-nueva-wrap");
+  const npCategoriaNueva = document.getElementById("np-categoria-nueva") as HTMLInputElement | null;
+
+  npCategoria?.addEventListener("change", () => {
+    const esNueva = npCategoria.value === "__nueva__";
+    npCategoriaNuevaWrap?.classList.toggle("hidden", !esNueva);
+    if (!esNueva && npCategoriaNueva) npCategoriaNueva.value = "";
+  });
 
   let slugEditedManually = false;
   npSlug?.addEventListener("input", () => {
@@ -741,6 +904,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     if (show) return;
     nuevoProductoForm?.reset();
     slugEditedManually = false;
+    npCategoriaNuevaWrap?.classList.add("hidden");
   }
 
   nuevoProductoBtn?.addEventListener("click", () => toggleNuevoProductoPanel(true));
@@ -753,7 +917,9 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
     const nombre = npNombre?.value.trim() ?? "";
     const slug = npSlug?.value.trim() ?? "";
-    const categoria = (document.getElementById("np-categoria") as HTMLInputElement).value.trim();
+    const categoriaSeleccionada = npCategoria?.value ?? "";
+    const categoriaNuevaNombre = npCategoriaNueva?.value.trim() ?? "";
+    const categoria = categoriaSeleccionada === "__nueva__" ? slugify(categoriaNuevaNombre) : categoriaSeleccionada;
     const categoriasRaw = (document.getElementById("np-categorias") as HTMLInputElement).value;
     const precio = (document.getElementById("np-precio") as HTMLInputElement).value;
     const stock = (document.getElementById("np-stock") as HTMLInputElement).value;
@@ -762,6 +928,14 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     const descCorta = (document.getElementById("np-desc-corta") as HTMLInputElement).value.trim();
     const descripcion = (document.getElementById("np-descripcion") as HTMLTextAreaElement).value.trim();
     const destacado = (document.getElementById("np-destacado") as HTMLInputElement).checked;
+
+    if (categoriaSeleccionada === "__nueva__" && !categoriaNuevaNombre) {
+      if (nuevoProductoError) {
+        nuevoProductoError.textContent = "Escribe el nombre de la nueva categoría.";
+        nuevoProductoError.classList.remove("hidden");
+      }
+      return;
+    }
 
     if (!nombre || !slug || !categoria || !precio || !descCorta || !descripcion) {
       if (nuevoProductoError) {
@@ -783,6 +957,17 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     }
 
     try {
+      const esCategoriaNueva = categoriaSeleccionada === "__nueva__";
+
+      if (esCategoriaNueva) {
+        const emojiNuevaCategoria = (document.getElementById("np-categoria-nueva-emoji") as HTMLInputElement).value.trim();
+        await createCategoria({
+          slug: categoria,
+          nombre: categoriaNuevaNombre,
+          emoji: emojiNuevaCategoria || undefined,
+        });
+      }
+
       await createProducto({
         slug,
         nombre,
@@ -798,13 +983,16 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       });
 
       if (nuevoProductoSuccess) {
-        nuevoProductoSuccess.textContent =
-          "Producto guardado. Aparecerá en la tienda pública después del próximo despliegue del sitio.";
+        nuevoProductoSuccess.textContent = esCategoriaNueva
+          ? "Producto y categoría guardados. Aparecerán en la tienda pública después del próximo despliegue del sitio."
+          : "Producto guardado. Aparecerá en la tienda pública después del próximo despliegue del sitio.";
         nuevoProductoSuccess.classList.remove("hidden");
       }
       nuevoProductoForm.reset();
       slugEditedManually = false;
+      npCategoriaNuevaWrap?.classList.add("hidden");
       await loadProductos();
+      if (esCategoriaNueva) await loadCategorias();
     } catch (err) {
       if (nuevoProductoError) {
         nuevoProductoError.textContent = err instanceof Error ? err.message : "No se pudo crear el producto.";
@@ -828,6 +1016,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         dashboardLoaded = true;
         loadPedidos();
         loadProductos();
+        loadCategorias();
       }
     } else {
       dashboardLoaded = false;
