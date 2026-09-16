@@ -215,6 +215,21 @@ const products = await getProducts();
 
       if (insertError) throw new Error(insertError.message);
 
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "evento",
+          clienteNombre: nombre,
+          clienteEmail: email,
+          clienteTelefono: telefono,
+          productoInteres: producto,
+          cantidad,
+          fechaEvento,
+          fechaEntregaDeseada: fechaEntrega,
+        }),
+      }).catch(() => {});
+
       form.classList.add("hidden");
       successEl?.classList.remove("hidden");
       successEl?.scrollIntoView({ behavior: "smooth", block: "start" });

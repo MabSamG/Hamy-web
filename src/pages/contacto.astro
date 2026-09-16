@@ -126,6 +126,12 @@ import Layout from "../layouts/Layout.astro";
       const { error } = await supabase.from("mensajes_contacto").insert({ nombre, email, mensaje });
       if (error) throw new Error(error.message);
 
+      fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "contacto", nombre, email, mensaje }),
+      }).catch(() => {});
+
       form.classList.add("hidden");
       successEl?.classList.remove("hidden");
       successEl?.scrollIntoView({ behavior: "smooth", block: "start" });
