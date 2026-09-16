@@ -1,0 +1,170 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Consulta tu pedido" description="Consulta el estado de tu pedido en Hamy con tu referencia y tu email.">
+  <section class="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+    <div class="text-center">
+      <h1 class="font-heading text-5xl font-bold text-hamy-brown">Consulta tu pedido</h1>
+      <p class="mt-3 text-hamy-brown-light">
+        Introduce la referencia y el email que usaste al confirmar tu pedido para ver su estado.
+      </p>
+    </div>
+
+    <form id="buscar-form" class="mt-10 space-y-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20 sm:p-8" novalidate>
+      <div>
+        <label for="buscar-referencia" class="mb-1 block text-sm font-semibold text-hamy-brown">Referencia del pedido</label>
+        <input
+          id="buscar-referencia"
+          type="text"
+          required
+          placeholder="Ej. A1B2C3D4"
+          class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm uppercase tracking-wide focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
+        />
+      </div>
+      <div>
+        <label for="buscar-email" class="mb-1 block text-sm font-semibold text-hamy-brown">Email usado en el pedido</label>
+        <input
+          id="buscar-email"
+          type="email"
+          required
+          class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
+        />
+      </div>
+      <p id="buscar-error" class="hidden text-sm font-semibold text-red-500"></p>
+      <button type="submit" id="buscar-submit" class="btn-primary w-full justify-center">Consultar</button>
+    </form>
+
+    <div id="resultado" class="mt-8 hidden rounded-3xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20 sm:p-8">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="text-xs text-hamy-brown-light">Referencia</p>
+          <p id="resultado-referencia" class="font-heading text-xl font-bold text-hamy-coral"></p>
+        </div>
+        <span id="resultado-estado" class="rounded-full bg-hamy-cream-dark px-4 py-1.5 text-sm font-semibold text-hamy-brown"></span>
+      </div>
+      <p id="resultado-fecha" class="mt-2 text-xs text-hamy-brown-light"></p>
+
+      <ul id="resultado-items" class="mt-5 space-y-2 border-t border-hamy-pink-light/20 pt-4 text-sm text-hamy-brown"></ul>
+
+      <div class="mt-4 flex items-center justify-between border-t border-hamy-pink-light/20 pt-4 font-bold text-hamy-brown">
+        <span>Total</span>
+        <span id="resultado-total"></span>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  import { formatPrice } from "../data/products";
+
+  type PedidoItem = {
+    producto_nombre: string;
+    cantidad: number;
+    precio_unitario_cents: number;
+  };
+
+  type ResultadoPedido = {
+    referencia: string;
+    estado: string;
+    creado_en: string;
+    items: PedidoItem[];
+    total_cents: number;
+  };
+
+  const ESTADO_LABELS: Record<string, string> = {
+    recibido: "Recibido",
+    preparando: "Preparando",
+    enviado: "Enviado",
+  };
+
+  const form = document.getElementById("buscar-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("buscar-error");
+  const submitBtn = document.getElementById("buscar-submit") as HTMLButtonElement | null;
+  const resultado = document.getElementById("resultado");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl?.classList.add("hidden");
+    resultado?.classList.add("hidden");
+
+    const referencia = (document.getElementById("buscar-referencia") as HTMLInputElement).value.trim();
+    const email = (document.getElementById("buscar-email") as HTMLInputElement).value.trim();
+
+    if (!referencia || !email) {
+      if (errorEl) {
+        errorEl.textContent = "Completa la referencia y el email.";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Buscando...";
+    }
+
+    try {
+      const { data, error } = await supabase.rpc("buscar_pedido", {
+        p_referencia: referencia,
+        p_email: email,
+      });
+
+      if (error) throw new Error(error.message);
+
+      const pedido = (Array.isArray(data) ? data[0] : data) as ResultadoPedido | undefined;
+
+      if (!pedido) {
+        if (errorEl) {
+          errorEl.textContent = "No encontramos ningún pedido con esa referencia y ese email. Revísalos e inténtalo de nuevo.";
+          errorEl.classList.remove("hidden");
+        }
+        return;
+      }
+
+      const refEl = document.getElementById("resultado-referencia");
+      if (refEl) refEl.textContent = pedido.referencia;
+
+      const estadoEl = document.getElementById("resultado-estado");
+      if (estadoEl) estadoEl.textContent = ESTADO_LABELS[pedido.estado] ?? pedido.estado;
+
+      const fechaEl = document.getElementById("resultado-fecha");
+      if (fechaEl) {
+        fechaEl.textContent = `Pedido el ${new Date(pedido.creado_en).toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" })}`;
+      }
+
+      const itemsList = document.getElementById("resultado-items");
+      if (itemsList) {
+        itemsList.innerHTML = "";
+        for (const item of pedido.items ?? []) {
+          const li = document.createElement("li");
+          li.className = "flex items-center justify-between gap-3";
+          const name = document.createElement("span");
+          name.textContent = `${item.producto_nombre} × ${item.cantidad}`;
+          const price = document.createElement("span");
+          price.className = "font-semibold";
+          price.textContent = formatPrice(item.precio_unitario_cents * item.cantidad);
+          li.append(name, price);
+          itemsList.appendChild(li);
+        }
+      }
+
+      const totalEl = document.getElementById("resultado-total");
+      if (totalEl) totalEl.textContent = formatPrice(pedido.total_cents);
+
+      resultado?.classList.remove("hidden");
+      resultado?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      if (errorEl) {
+        errorEl.textContent = err instanceof Error ? err.message : "No se pudo consultar el pedido. Inténtalo de nuevo.";
+        errorEl.classList.remove("hidden");
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Consultar";
+      }
+    }
+  });
+</script>

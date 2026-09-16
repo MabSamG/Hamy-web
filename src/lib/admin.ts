@@ -24,6 +24,7 @@ export type PedidoItem = {
 
 export type Pedido = {
   id: string;
+  referencia: string;
   creado_en: string;
   estado: PedidoEstado;
   cliente_nombre: string;

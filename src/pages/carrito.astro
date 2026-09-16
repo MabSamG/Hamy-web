@@ -88,6 +88,9 @@ import Layout from "../layouts/Layout.astro";
         Referencia: <span id="success-order-id" class="font-semibold text-hamy-coral"></span>
       </p>
       <p class="mt-2 text-sm text-hamy-brown-light">Te contactaremos en breve para confirmar los detalles y el pago.</p>
+      <p class="mt-1 text-sm text-hamy-brown-light">
+        Guarda tu referencia — puedes usarla en <a href="/mi-pedido" class="font-semibold text-hamy-coral hover:underline">Consulta tu pedido</a> para ver su estado más adelante.
+      </p>
       <a href="/productos" class="btn-secondary mt-6 inline-flex">Seguir comprando</a>
     </div>
   </section>
@@ -236,6 +239,7 @@ import Layout from "../layouts/Layout.astro";
 
     try {
       const pedidoId = crypto.randomUUID();
+      const referencia = pedidoId.slice(0, 8).toUpperCase();
 
       const items = [];
       for (const item of currentItems) {
@@ -271,6 +275,7 @@ import Layout from "../layouts/Layout.astro";
 
       const { error: insertError } = await supabase.from("pedidos").insert({
         id: pedidoId,
+        referencia,
         cliente_nombre: nombre,
         cliente_email: email,
         cliente_telefono: telefono || null,
@@ -298,7 +303,7 @@ import Layout from "../layouts/Layout.astro";
       await clearCart();
 
       const successOrderId = document.getElementById("success-order-id");
-      if (successOrderId) successOrderId.textContent = pedidoId.slice(0, 8).toUpperCase();
+      if (successOrderId) successOrderId.textContent = referencia;
 
       contentEl?.classList.add("hidden");
       successEl?.classList.remove("hidden");

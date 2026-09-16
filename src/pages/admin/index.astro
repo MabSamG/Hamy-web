@@ -382,7 +382,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     const meta = document.createElement("div");
     const dateP = document.createElement("p");
     dateP.className = "text-xs text-hamy-brown-light";
-    dateP.textContent = formatDate(pedido.creado_en);
+    dateP.textContent = `${formatDate(pedido.creado_en)} · Ref. ${pedido.referencia}`;
     const clientP = document.createElement("p");
     clientP.className = "font-heading text-lg font-bold text-hamy-brown";
     clientP.textContent = `${pedido.cliente_nombre} · ${pedido.cliente_email}`;

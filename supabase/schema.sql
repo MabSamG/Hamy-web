@@ -419,3 +419,42 @@ create policy "mensajes_contacto: actualizacion solo admin"
   to authenticated
   using (true)
   with check (true);
+
+-- ------------------------------------------------------------
+-- 9. CONSULTA PUBLICA DE PEDIDOS — /mi-pedido (referencia + email)
+--    La tabla "pedidos" sigue sin lectura publica (tiene datos de
+--    contacto de todos los clientes). En vez de eso, esta funcion
+--    "security definer" devuelve como mucho una fila, y solo si
+--    coinciden EXACTAMENTE la referencia y el email — no es una
+--    consulta abierta a la tabla.
+-- ------------------------------------------------------------
+
+alter table public.pedidos add column if not exists referencia text;
+
+update public.pedidos set referencia = upper(left(id::text, 8)) where referencia is null;
+
+alter table public.pedidos alter column referencia set not null;
+
+create unique index if not exists pedidos_referencia_idx on public.pedidos (referencia);
+
+create or replace function public.buscar_pedido(p_referencia text, p_email text)
+returns table (
+  referencia text,
+  estado text,
+  creado_en timestamptz,
+  items jsonb,
+  total_cents integer
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select p.referencia, p.estado, p.creado_en, p.items, p.total_cents
+  from public.pedidos p
+  where p.referencia = upper(trim(p_referencia))
+    and lower(p.cliente_email) = lower(trim(p_email))
+  limit 1;
+$$;
+
+revoke all on function public.buscar_pedido(text, text) from public;
+grant execute on function public.buscar_pedido(text, text) to anon, authenticated;
