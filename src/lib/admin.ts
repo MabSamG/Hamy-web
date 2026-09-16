@@ -193,6 +193,26 @@ export async function getFotoEventoUrl(path: string): Promise<string | null> {
   return data.signedUrl;
 }
 
+export type MensajeContacto = {
+  id: string;
+  creado_en: string;
+  nombre: string;
+  email: string;
+  mensaje: string;
+  atendido: boolean;
+};
+
+export async function listMensajesContacto(): Promise<MensajeContacto[]> {
+  const { data, error } = await supabase.from("mensajes_contacto").select("*").order("creado_en", { ascending: false });
+  if (error) throw new Error(`No se pudieron cargar los mensajes de contacto: ${error.message}`);
+  return (data ?? []) as MensajeContacto[];
+}
+
+export async function updateMensajeContactoAtendido(id: string, atendido: boolean): Promise<void> {
+  const { error } = await supabase.from("mensajes_contacto").update({ atendido }).eq("id", id);
+  if (error) throw new Error(`No se pudo actualizar el mensaje: ${error.message}`);
+}
+
 export type AnalyticsEvento = {
   id: string;
   tipo: "pagina_vista" | "producto_vista";

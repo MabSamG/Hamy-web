@@ -53,6 +53,13 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         </button>
         <button
           type="button"
+          data-tab="contacto"
+          class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
+        >
+          Contacto
+        </button>
+        <button
+          type="button"
           data-tab="productos"
           class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
         >
@@ -81,6 +88,12 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         <p id="consultas-loading" class="mt-4 text-hamy-brown-light">Cargando consultas...</p>
         <p id="consultas-empty" class="hidden mt-4 text-hamy-brown-light">Todavía no hay consultas de eventos.</p>
         <ul id="consultas-list" class="mt-4 space-y-4"></ul>
+      </div>
+
+      <div id="tab-contacto" class="tab-panel mt-6 hidden">
+        <p id="mensajes-loading" class="text-hamy-brown-light">Cargando mensajes...</p>
+        <p id="mensajes-empty" class="hidden text-hamy-brown-light">Todavía no hay mensajes de contacto.</p>
+        <ul id="mensajes-list" class="space-y-4"></ul>
       </div>
 
       <div id="tab-productos" class="tab-panel mt-6 hidden">
@@ -296,12 +309,15 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     listConsultasEventos,
     updateConsultaEventoAtendida,
     getFotoEventoUrl,
+    listMensajesContacto,
+    updateMensajeContactoAtendido,
     type Pedido,
     type PedidoEstado,
     type ProductoAdmin,
     type AnalyticsEvento,
     type CategoriaAdmin,
     type ConsultaEvento,
+    type MensajeContacto,
   } from "../../lib/admin";
   import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
@@ -322,6 +338,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   const tabPanels: Record<string, HTMLElement | null> = {
     pedidos: document.getElementById("tab-pedidos"),
     eventos: document.getElementById("tab-eventos"),
+    contacto: document.getElementById("tab-contacto"),
     productos: document.getElementById("tab-productos"),
     estadisticas: document.getElementById("tab-estadisticas"),
   };
@@ -613,6 +630,78 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       consultasList.appendChild(errorP);
     } finally {
       consultasLoading?.classList.add("hidden");
+    }
+  }
+
+  const mensajesList = document.getElementById("mensajes-list");
+  const mensajesLoading = document.getElementById("mensajes-loading");
+  const mensajesEmpty = document.getElementById("mensajes-empty");
+
+  function renderMensaje(mensaje: MensajeContacto): HTMLElement {
+    const li = document.createElement("li");
+    li.className = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20";
+    li.classList.toggle("opacity-60", mensaje.atendido);
+
+    const header = document.createElement("div");
+    header.className = "flex flex-wrap items-start justify-between gap-3";
+
+    const meta = document.createElement("div");
+    const dateP = document.createElement("p");
+    dateP.className = "text-xs text-hamy-brown-light";
+    dateP.textContent = formatDate(mensaje.creado_en);
+    const clientP = document.createElement("p");
+    clientP.className = "font-heading text-lg font-bold text-hamy-brown";
+    clientP.textContent = `${mensaje.nombre} · ${mensaje.email}`;
+    meta.append(dateP, clientP);
+
+    const atendidoLabel = document.createElement("label");
+    atendidoLabel.className = "flex items-center gap-2 text-xs font-semibold text-hamy-brown";
+    const atendidoCheckbox = document.createElement("input");
+    atendidoCheckbox.type = "checkbox";
+    atendidoCheckbox.checked = mensaje.atendido;
+    atendidoCheckbox.addEventListener("change", async () => {
+      atendidoCheckbox.disabled = true;
+      try {
+        await updateMensajeContactoAtendido(mensaje.id, atendidoCheckbox.checked);
+        mensaje.atendido = atendidoCheckbox.checked;
+        li.classList.toggle("opacity-60", mensaje.atendido);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo actualizar el mensaje.");
+        atendidoCheckbox.checked = !atendidoCheckbox.checked;
+      } finally {
+        atendidoCheckbox.disabled = false;
+      }
+    });
+    atendidoLabel.append(atendidoCheckbox, document.createTextNode("Atendido"));
+
+    header.append(meta, atendidoLabel);
+    li.appendChild(header);
+
+    const mensajeP = document.createElement("p");
+    mensajeP.className = "mt-3 rounded-lg bg-hamy-cream-dark px-3 py-2 text-sm text-hamy-brown-light";
+    mensajeP.textContent = mensaje.mensaje;
+    li.appendChild(mensajeP);
+
+    return li;
+  }
+
+  async function loadMensajesContacto() {
+    if (!mensajesList) return;
+    mensajesLoading?.classList.remove("hidden");
+    mensajesEmpty?.classList.add("hidden");
+    try {
+      const mensajes = await listMensajesContacto();
+      mensajesList.innerHTML = "";
+      mensajesEmpty?.classList.toggle("hidden", mensajes.length > 0);
+      mensajes.forEach((mensaje) => mensajesList.appendChild(renderMensaje(mensaje)));
+    } catch (err) {
+      mensajesList.innerHTML = "";
+      const errorP = document.createElement("p");
+      errorP.className = "text-sm font-semibold text-red-500";
+      errorP.textContent = err instanceof Error ? err.message : "No se pudieron cargar los mensajes de contacto.";
+      mensajesList.appendChild(errorP);
+    } finally {
+      mensajesLoading?.classList.add("hidden");
     }
   }
 
@@ -1144,6 +1233,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         dashboardLoaded = true;
         loadPedidos();
         loadConsultasEventos();
+        loadMensajesContacto();
         loadProductos();
         loadCategorias();
       }

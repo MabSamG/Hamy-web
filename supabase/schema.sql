@@ -385,3 +385,37 @@ create policy "fotos-eventos: borrado solo admin"
   on storage.objects for delete
   to authenticated
   using (bucket_id = 'fotos-eventos');
+
+-- ------------------------------------------------------------
+-- 8. MENSAJES DE CONTACTO — formulario general de /contacto
+-- ------------------------------------------------------------
+
+create table if not exists public.mensajes_contacto (
+  id uuid primary key default gen_random_uuid(),
+  creado_en timestamptz not null default now(),
+  nombre text not null,
+  email text not null,
+  mensaje text not null,
+  atendido boolean not null default false
+);
+
+alter table public.mensajes_contacto enable row level security;
+
+drop policy if exists "mensajes_contacto: creacion publica" on public.mensajes_contacto;
+create policy "mensajes_contacto: creacion publica"
+  on public.mensajes_contacto for insert
+  to anon, authenticated
+  with check (atendido = false);
+
+drop policy if exists "mensajes_contacto: lectura solo admin" on public.mensajes_contacto;
+create policy "mensajes_contacto: lectura solo admin"
+  on public.mensajes_contacto for select
+  to authenticated
+  using (true);
+
+drop policy if exists "mensajes_contacto: actualizacion solo admin" on public.mensajes_contacto;
+create policy "mensajes_contacto: actualizacion solo admin"
+  on public.mensajes_contacto for update
+  to authenticated
+  using (true)
+  with check (true);

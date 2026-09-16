@@ -10,42 +10,48 @@ import Layout from "../layouts/Layout.astro";
     </div>
 
     <div class="mt-12 grid gap-10 md:grid-cols-2">
-      <form class="space-y-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20 sm:p-8">
-        <div>
-          <label for="nombre" class="mb-1 block text-sm font-semibold text-hamy-brown">Nombre</label>
-          <input
-            id="nombre"
-            name="nombre"
-            type="text"
-            required
-            class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
-          />
+      <div>
+        <form id="contacto-form" class="space-y-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-hamy-pink-light/20 sm:p-8" novalidate>
+          <div>
+            <label for="nombre" class="mb-1 block text-sm font-semibold text-hamy-brown">Nombre</label>
+            <input
+              id="nombre"
+              name="nombre"
+              type="text"
+              required
+              class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
+            />
+          </div>
+          <div>
+            <label for="email" class="mb-1 block text-sm font-semibold text-hamy-brown">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              required
+              class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
+            />
+          </div>
+          <div>
+            <label for="mensaje" class="mb-1 block text-sm font-semibold text-hamy-brown">Mensaje</label>
+            <textarea
+              id="mensaje"
+              name="mensaje"
+              rows="5"
+              required
+              class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
+            ></textarea>
+          </div>
+          <p id="contacto-error" class="hidden text-sm font-semibold text-red-500"></p>
+          <button type="submit" id="contacto-submit" class="btn-primary w-full justify-center">Enviar mensaje</button>
+        </form>
+
+        <div id="contacto-success" class="hidden rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-hamy-pink-light/20">
+          <span class="text-4xl" aria-hidden="true">💌</span>
+          <p class="mt-3 font-heading text-xl font-bold text-hamy-brown">¡Mensaje enviado!</p>
+          <p class="mt-2 text-sm text-hamy-brown-light">Gracias por escribirnos, te responderemos lo antes posible.</p>
         </div>
-        <div>
-          <label for="email" class="mb-1 block text-sm font-semibold text-hamy-brown">Email</label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            required
-            class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
-          />
-        </div>
-        <div>
-          <label for="mensaje" class="mb-1 block text-sm font-semibold text-hamy-brown">Mensaje</label>
-          <textarea
-            id="mensaje"
-            name="mensaje"
-            rows="5"
-            required
-            class="w-full rounded-xl border border-hamy-pink-light/40 px-4 py-2.5 text-sm focus:border-hamy-coral focus:outline-none focus:ring-2 focus:ring-hamy-coral/30"
-          ></textarea>
-        </div>
-        <button type="submit" class="btn-primary w-full justify-center">Enviar mensaje</button>
-        <p class="text-xs text-hamy-brown-light">
-          * Formulario de contacto de ejemplo — el envío se conectará próximamente.
-        </p>
-      </form>
+      </div>
 
       <div class="flex flex-col gap-4">
         <a
@@ -86,3 +92,53 @@ import Layout from "../layouts/Layout.astro";
     </div>
   </section>
 </Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+
+  const form = document.getElementById("contacto-form") as HTMLFormElement | null;
+  const errorEl = document.getElementById("contacto-error");
+  const submitBtn = document.getElementById("contacto-submit") as HTMLButtonElement | null;
+  const successEl = document.getElementById("contacto-success");
+
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl?.classList.add("hidden");
+
+    const nombre = (document.getElementById("nombre") as HTMLInputElement).value.trim();
+    const email = (document.getElementById("email") as HTMLInputElement).value.trim();
+    const mensaje = (document.getElementById("mensaje") as HTMLTextAreaElement).value.trim();
+
+    if (!nombre || !email || !mensaje) {
+      if (errorEl) {
+        errorEl.textContent = "Completa tu nombre, email y mensaje.";
+        errorEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Enviando...";
+    }
+
+    try {
+      const { error } = await supabase.from("mensajes_contacto").insert({ nombre, email, mensaje });
+      if (error) throw new Error(error.message);
+
+      form.classList.add("hidden");
+      successEl?.classList.remove("hidden");
+      successEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      if (errorEl) {
+        errorEl.textContent = err instanceof Error ? err.message : "No se pudo enviar el mensaje. Inténtalo de nuevo.";
+        errorEl.classList.remove("hidden");
+      }
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Enviar mensaje";
+      }
+    }
+  });
+</script>
