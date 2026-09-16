@@ -46,10 +46,11 @@ import Layout from "../layouts/Layout.astro";
             />
           </div>
           <div>
-            <label for="cliente-telefono" class="block text-sm font-semibold text-hamy-brown">Teléfono</label>
+            <label for="cliente-telefono" class="block text-sm font-semibold text-hamy-brown">Teléfono *</label>
             <input
               id="cliente-telefono"
               type="tel"
+              required
               class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
             />
           </div>
@@ -219,8 +220,8 @@ import Layout from "../layouts/Layout.astro";
     const direccion = (document.getElementById("cliente-direccion") as HTMLTextAreaElement).value.trim();
     const notas = (document.getElementById("cliente-notas") as HTMLTextAreaElement).value.trim();
 
-    if (!nombre || !email) {
-      showCheckoutError("Completa tu nombre y email para confirmar el pedido.");
+    if (!nombre || !email || !telefono) {
+      showCheckoutError("Completa tu nombre, email y teléfono para confirmar el pedido.");
       return;
     }
     if (currentItems.length === 0) {
