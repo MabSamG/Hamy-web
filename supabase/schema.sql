@@ -312,3 +312,76 @@ create policy "analytics: lectura solo admin"
   on public.analytics_eventos for select
   to authenticated
   using (true);
+
+-- ------------------------------------------------------------
+-- 7. CONSULTAS DE EVENTOS — encargos por volumen (bodas, comuniones...)
+--    Esto NO es un pedido: es solo un contacto para presupuestar antes
+--    de confirmar nada, se gestiona aparte de la tabla "pedidos".
+-- ------------------------------------------------------------
+
+create table if not exists public.consultas_eventos (
+  id uuid primary key default gen_random_uuid(),
+  creado_en timestamptz not null default now(),
+  cliente_nombre text not null,
+  cliente_email text not null,
+  cliente_telefono text not null,
+  producto_interes text not null,
+  cantidad integer not null check (cantidad >= 15),
+  fecha_evento date not null,
+  fecha_entrega_deseada date not null,
+  imagen_referencia text, -- ruta en el bucket fotos-eventos; null si no subieron foto
+  descripcion text not null,
+  atendida boolean not null default false
+);
+
+alter table public.consultas_eventos enable row level security;
+
+-- El formulario publico puede crear la consulta, pero siempre sin marcar
+-- como atendida (eso solo lo hace el admin desde el panel).
+drop policy if exists "consultas_eventos: creacion publica" on public.consultas_eventos;
+create policy "consultas_eventos: creacion publica"
+  on public.consultas_eventos for insert
+  to anon, authenticated
+  with check (atendida = false);
+
+drop policy if exists "consultas_eventos: lectura solo admin" on public.consultas_eventos;
+create policy "consultas_eventos: lectura solo admin"
+  on public.consultas_eventos for select
+  to authenticated
+  using (true);
+
+drop policy if exists "consultas_eventos: actualizacion solo admin" on public.consultas_eventos;
+create policy "consultas_eventos: actualizacion solo admin"
+  on public.consultas_eventos for update
+  to authenticated
+  using (true)
+  with check (true);
+
+-- Foto de referencia opcional que el cliente sube al pedir presupuesto.
+insert into storage.buckets (id, name, public)
+values ('fotos-eventos', 'fotos-eventos', false)
+on conflict (id) do nothing;
+
+drop policy if exists "fotos-eventos: subida publica" on storage.objects;
+create policy "fotos-eventos: subida publica"
+  on storage.objects for insert
+  to anon, authenticated
+  with check (bucket_id = 'fotos-eventos');
+
+drop policy if exists "fotos-eventos: lectura solo admin" on storage.objects;
+create policy "fotos-eventos: lectura solo admin"
+  on storage.objects for select
+  to authenticated
+  using (bucket_id = 'fotos-eventos');
+
+drop policy if exists "fotos-eventos: gestion solo admin" on storage.objects;
+create policy "fotos-eventos: gestion solo admin"
+  on storage.objects for update
+  to authenticated
+  using (bucket_id = 'fotos-eventos');
+
+drop policy if exists "fotos-eventos: borrado solo admin" on storage.objects;
+create policy "fotos-eventos: borrado solo admin"
+  on storage.objects for delete
+  to authenticated
+  using (bucket_id = 'fotos-eventos');

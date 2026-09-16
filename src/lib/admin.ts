@@ -160,6 +160,39 @@ export async function deleteCategoria(id: string): Promise<void> {
   if (error) throw new Error(`No se pudo borrar la categoría: ${error.message}`);
 }
 
+export type ConsultaEvento = {
+  id: string;
+  creado_en: string;
+  cliente_nombre: string;
+  cliente_email: string;
+  cliente_telefono: string;
+  producto_interes: string;
+  cantidad: number;
+  fecha_evento: string;
+  fecha_entrega_deseada: string;
+  imagen_referencia: string | null;
+  descripcion: string;
+  atendida: boolean;
+};
+
+export async function listConsultasEventos(): Promise<ConsultaEvento[]> {
+  const { data, error } = await supabase.from("consultas_eventos").select("*").order("creado_en", { ascending: false });
+  if (error) throw new Error(`No se pudieron cargar las consultas de eventos: ${error.message}`);
+  return (data ?? []) as ConsultaEvento[];
+}
+
+export async function updateConsultaEventoAtendida(id: string, atendida: boolean): Promise<void> {
+  const { error } = await supabase.from("consultas_eventos").update({ atendida }).eq("id", id);
+  if (error) throw new Error(`No se pudo actualizar la consulta: ${error.message}`);
+}
+
+/** Bucket is private, so reference photos need a signed URL rather than a public one. */
+export async function getFotoEventoUrl(path: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from("fotos-eventos").createSignedUrl(path, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}
+
 export type AnalyticsEvento = {
   id: string;
   tipo: "pagina_vista" | "producto_vista";
