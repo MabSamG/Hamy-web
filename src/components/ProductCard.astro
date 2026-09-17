@@ -14,7 +14,10 @@ const isPersonalizable = product.personalization.length > 0;
 const photoUrl = getProductPhotoUrl(product.slug);
 ---
 
-<article class="group flex flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-hamy-pink-light/20 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-hamy-coral/10">
+<a
+  href={`/productos/${product.slug}`}
+  class="group flex flex-col overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-hamy-pink-light/20 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl hover:shadow-hamy-coral/10"
+>
   <div class="relative flex aspect-square items-center justify-center overflow-hidden bg-gradient-to-br from-hamy-pink/15 via-hamy-coral/15 to-hamy-orange/15">
     {
       photoUrl ? (
@@ -37,12 +40,11 @@ const photoUrl = getProductPhotoUrl(product.slug);
     <p class="flex-1 text-sm text-hamy-brown-light">{product.shortDescription}</p>
     <div class="mt-2 flex items-center justify-between">
       <span class="text-lg font-bold text-hamy-coral">{formatPrice(product.priceCents)}</span>
-      <a
-        href={`/productos/${product.slug}`}
-        class="rounded-full border-2 border-hamy-coral px-4 py-1.5 text-sm font-semibold text-hamy-coral transition-colors hover:bg-hamy-coral hover:text-white"
+      <span
+        class="rounded-full border-2 border-hamy-coral px-4 py-1.5 text-sm font-semibold text-hamy-coral transition-colors group-hover:bg-hamy-coral group-hover:text-white"
       >
         Ver más
-      </a>
+      </span>
     </div>
   </div>
-</article>
+</a>
