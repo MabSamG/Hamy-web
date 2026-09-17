@@ -523,3 +523,41 @@ $$;
 
 revoke all on function public.buscar_pedido(text, text) from public;
 grant execute on function public.buscar_pedido(text, text) to anon, authenticated;
+
+-- ------------------------------------------------------------
+-- 10. LEADS DEL AGENTE VIRTUAL — contacto capturado por el widget de
+--     chat flotante (respuestas predefinidas por palabras clave, sin
+--     LLM). "contacto" es el email o telefono tal cual lo escribio el
+--     visitante; "contexto" guarda su ultimo mensaje antes de que se
+--     le pidiera el contacto, para dar pistas de que necesitaba.
+-- ------------------------------------------------------------
+
+create table if not exists public.leads_agente (
+  id uuid primary key default gen_random_uuid(),
+  creado_en timestamptz not null default now(),
+  nombre text not null,
+  contacto text not null,
+  contexto text,
+  atendido boolean not null default false
+);
+
+alter table public.leads_agente enable row level security;
+
+drop policy if exists "leads_agente: creacion publica" on public.leads_agente;
+create policy "leads_agente: creacion publica"
+  on public.leads_agente for insert
+  to anon, authenticated
+  with check (atendido = false);
+
+drop policy if exists "leads_agente: lectura solo admin" on public.leads_agente;
+create policy "leads_agente: lectura solo admin"
+  on public.leads_agente for select
+  to authenticated
+  using (true);
+
+drop policy if exists "leads_agente: actualizacion solo admin" on public.leads_agente;
+create policy "leads_agente: actualizacion solo admin"
+  on public.leads_agente for update
+  to authenticated
+  using (true)
+  with check (true);

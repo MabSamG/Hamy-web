@@ -60,6 +60,13 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         </button>
         <button
           type="button"
+          data-tab="agente"
+          class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
+        >
+          Agente
+        </button>
+        <button
+          type="button"
           data-tab="productos"
           class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
         >
@@ -94,6 +101,16 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         <p id="mensajes-loading" class="text-hamy-brown-light">Cargando mensajes...</p>
         <p id="mensajes-empty" class="hidden text-hamy-brown-light">Todavía no hay mensajes de contacto.</p>
         <ul id="mensajes-list" class="space-y-4"></ul>
+      </div>
+
+      <div id="tab-agente" class="tab-panel mt-6 hidden">
+        <p class="text-sm text-hamy-brown-light">
+          Contactos capturados por el agente virtual (widget de chat flotante) cuando un visitante deja su nombre y un
+          email o teléfono.
+        </p>
+        <p id="leads-loading" class="mt-4 text-hamy-brown-light">Cargando contactos...</p>
+        <p id="leads-empty" class="hidden mt-4 text-hamy-brown-light">Todavía no hay contactos del agente.</p>
+        <ul id="leads-list" class="mt-4 space-y-4"></ul>
       </div>
 
       <div id="tab-productos" class="tab-panel mt-6 hidden">
@@ -323,6 +340,8 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     getFotoEventoUrl,
     listMensajesContacto,
     updateMensajeContactoAtendido,
+    listLeadsAgente,
+    updateLeadAgenteAtendido,
     type Pedido,
     type PedidoEstado,
     type PagoEstado,
@@ -331,6 +350,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     type CategoriaAdmin,
     type ConsultaEvento,
     type MensajeContacto,
+    type LeadAgente,
   } from "../../lib/admin";
   import { zonaLabel } from "../../data/shipping";
   import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
@@ -353,6 +373,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     pedidos: document.getElementById("tab-pedidos"),
     eventos: document.getElementById("tab-eventos"),
     contacto: document.getElementById("tab-contacto"),
+    agente: document.getElementById("tab-agente"),
     productos: document.getElementById("tab-productos"),
     estadisticas: document.getElementById("tab-estadisticas"),
   };
@@ -774,6 +795,80 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       mensajesList.appendChild(errorP);
     } finally {
       mensajesLoading?.classList.add("hidden");
+    }
+  }
+
+  const leadsList = document.getElementById("leads-list");
+  const leadsLoading = document.getElementById("leads-loading");
+  const leadsEmpty = document.getElementById("leads-empty");
+
+  function renderLead(lead: LeadAgente): HTMLElement {
+    const li = document.createElement("li");
+    li.className = "rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20";
+    li.classList.toggle("opacity-60", lead.atendido);
+
+    const header = document.createElement("div");
+    header.className = "flex flex-wrap items-start justify-between gap-3";
+
+    const meta = document.createElement("div");
+    const dateP = document.createElement("p");
+    dateP.className = "text-xs text-hamy-brown-light";
+    dateP.textContent = formatDate(lead.creado_en);
+    const clientP = document.createElement("p");
+    clientP.className = "font-heading text-lg font-bold text-hamy-brown";
+    clientP.textContent = `${lead.nombre} · ${lead.contacto}`;
+    meta.append(dateP, clientP);
+
+    const atendidoLabel = document.createElement("label");
+    atendidoLabel.className = "flex items-center gap-2 text-xs font-semibold text-hamy-brown";
+    const atendidoCheckbox = document.createElement("input");
+    atendidoCheckbox.type = "checkbox";
+    atendidoCheckbox.checked = lead.atendido;
+    atendidoCheckbox.addEventListener("change", async () => {
+      atendidoCheckbox.disabled = true;
+      try {
+        await updateLeadAgenteAtendido(lead.id, atendidoCheckbox.checked);
+        lead.atendido = atendidoCheckbox.checked;
+        li.classList.toggle("opacity-60", lead.atendido);
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo actualizar el contacto.");
+        atendidoCheckbox.checked = !atendidoCheckbox.checked;
+      } finally {
+        atendidoCheckbox.disabled = false;
+      }
+    });
+    atendidoLabel.append(atendidoCheckbox, document.createTextNode("Atendido"));
+
+    header.append(meta, atendidoLabel);
+    li.appendChild(header);
+
+    if (lead.contexto) {
+      const contextoP = document.createElement("p");
+      contextoP.className = "mt-3 rounded-lg bg-hamy-cream-dark px-3 py-2 text-sm text-hamy-brown-light";
+      contextoP.textContent = `Preguntaba por: "${lead.contexto}"`;
+      li.appendChild(contextoP);
+    }
+
+    return li;
+  }
+
+  async function loadLeadsAgente() {
+    if (!leadsList) return;
+    leadsLoading?.classList.remove("hidden");
+    leadsEmpty?.classList.add("hidden");
+    try {
+      const leads = await listLeadsAgente();
+      leadsList.innerHTML = "";
+      leadsEmpty?.classList.toggle("hidden", leads.length > 0);
+      leads.forEach((lead) => leadsList.appendChild(renderLead(lead)));
+    } catch (err) {
+      leadsList.innerHTML = "";
+      const errorP = document.createElement("p");
+      errorP.className = "text-sm font-semibold text-red-500";
+      errorP.textContent = err instanceof Error ? err.message : "No se pudieron cargar los contactos del agente.";
+      leadsList.appendChild(errorP);
+    } finally {
+      leadsLoading?.classList.add("hidden");
     }
   }
 
@@ -1316,6 +1411,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         loadPedidos();
         loadConsultasEventos();
         loadMensajesContacto();
+        loadLeadsAgente();
         loadProductos();
         loadCategorias();
       }

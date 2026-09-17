@@ -1,0 +1,232 @@
+---
+---
+
+<div class="fixed bottom-5 right-5 z-40 font-heading">
+  <button
+    type="button"
+    id="chat-toggle"
+    aria-label="Abrir chat de ayuda"
+    aria-expanded="false"
+    class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-2xl text-white shadow-lg shadow-hamy-coral/40 transition-transform duration-200 hover:scale-105"
+  >
+    💬
+  </button>
+
+  <div
+    id="chat-panel"
+    class="fixed bottom-24 right-5 z-40 hidden h-[28rem] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30"
+    role="dialog"
+    aria-label="Chat de ayuda de Hamy"
+  >
+    <div class="flex items-center justify-between bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange px-4 py-3 text-white">
+      <div>
+        <p class="font-heading text-base font-bold leading-tight">Hamy · Asistente</p>
+        <p class="text-xs text-white/80">Respuestas automáticas</p>
+      </div>
+      <button type="button" id="chat-close" aria-label="Cerrar chat" class="text-xl leading-none">✕</button>
+    </div>
+
+    <div id="chat-messages" class="flex-1 space-y-3 overflow-y-auto bg-hamy-cream px-4 py-4 text-sm"></div>
+
+    <form id="chat-form" class="flex items-center gap-2 border-t border-hamy-pink-light/20 bg-white p-3">
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Escribe tu pregunta..."
+        autocomplete="off"
+        class="flex-1 rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+      />
+      <button
+        type="submit"
+        aria-label="Enviar"
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-white"
+      >
+        ➤
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  import { saludoInicial, responderMensaje, type ChatRespuesta } from "../lib/chatbot";
+
+  const toggleBtn = document.getElementById("chat-toggle");
+  const closeBtn = document.getElementById("chat-close");
+  const panel = document.getElementById("chat-panel");
+  const messagesEl = document.getElementById("chat-messages");
+  const form = document.getElementById("chat-form") as HTMLFormElement | null;
+  const input = document.getElementById("chat-input") as HTMLInputElement | null;
+
+  let abiertoAlgunaVez = false;
+  let respuestasDadas = 0;
+  let leadPedido = false;
+  let ultimoMensajeUsuario = "";
+
+  function scrollAbajo() {
+    if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function agregarBurbuja(texto: string, autor: "bot" | "usuario", enlace?: ChatRespuesta["enlace"]): HTMLDivElement {
+    const fila = document.createElement("div");
+    fila.className = `flex ${autor === "usuario" ? "justify-end" : "justify-start"}`;
+
+    const burbuja = document.createElement("div");
+    burbuja.className =
+      autor === "usuario"
+        ? "max-w-[85%] rounded-2xl rounded-br-sm bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange px-3 py-2 text-white"
+        : "max-w-[85%] rounded-2xl rounded-bl-sm bg-white px-3 py-2 text-hamy-brown ring-1 ring-hamy-pink-light/20";
+
+    const p = document.createElement("p");
+    p.textContent = texto;
+    burbuja.appendChild(p);
+
+    if (enlace) {
+      const a = document.createElement("a");
+      a.href = enlace.href;
+      a.textContent = enlace.label;
+      a.className = "mt-2 inline-block text-xs font-bold text-hamy-coral underline underline-offset-2";
+      burbuja.appendChild(a);
+    }
+
+    fila.appendChild(burbuja);
+    messagesEl?.appendChild(fila);
+    scrollAbajo();
+    return burbuja;
+  }
+
+  function mostrarCapturaDeContacto() {
+    leadPedido = true;
+
+    const fila = document.createElement("div");
+    fila.className = "flex justify-start";
+
+    const burbuja = document.createElement("div");
+    burbuja.className = "max-w-[90%] rounded-2xl rounded-bl-sm bg-white px-3 py-3 text-hamy-brown ring-1 ring-hamy-pink-light/20";
+
+    const intro = document.createElement("p");
+    intro.textContent = "Si quieres, déjanos tu nombre y un email o teléfono y te contactamos si hace falta 😊";
+    burbuja.appendChild(intro);
+
+    const miniForm = document.createElement("form");
+    miniForm.className = "mt-3 space-y-2";
+
+    const nombreInput = document.createElement("input");
+    nombreInput.type = "text";
+    nombreInput.placeholder = "Tu nombre";
+    nombreInput.required = true;
+    nombreInput.className =
+      "w-full rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none";
+
+    const contactoInput = document.createElement("input");
+    contactoInput.type = "text";
+    contactoInput.placeholder = "Email o teléfono";
+    contactoInput.required = true;
+    contactoInput.className = nombreInput.className;
+
+    const errorP = document.createElement("p");
+    errorP.className = "hidden text-xs font-semibold text-red-500";
+
+    const botones = document.createElement("div");
+    botones.className = "flex items-center gap-2";
+
+    const enviarBtn = document.createElement("button");
+    enviarBtn.type = "submit";
+    enviarBtn.textContent = "Enviar";
+    enviarBtn.className =
+      "rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange px-4 py-1.5 text-xs font-bold text-white";
+
+    const ahoraNoBtn = document.createElement("button");
+    ahoraNoBtn.type = "button";
+    ahoraNoBtn.textContent = "Ahora no";
+    ahoraNoBtn.className = "px-2 py-1.5 text-xs font-semibold text-hamy-brown-light hover:underline";
+
+    botones.append(enviarBtn, ahoraNoBtn);
+    miniForm.append(nombreInput, contactoInput, errorP, botones);
+    burbuja.appendChild(miniForm);
+    fila.appendChild(burbuja);
+    messagesEl?.appendChild(fila);
+    scrollAbajo();
+
+    ahoraNoBtn.addEventListener("click", () => {
+      miniForm.remove();
+      const nota = document.createElement("p");
+      nota.className = "mt-2 text-xs text-hamy-brown-light";
+      nota.textContent = "De acuerdo, aquí sigo si necesitas algo más 🙂";
+      burbuja.appendChild(nota);
+    });
+
+    miniForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorP.classList.add("hidden");
+      const nombre = nombreInput.value.trim();
+      const contacto = contactoInput.value.trim();
+      if (!nombre || !contacto) return;
+
+      enviarBtn.disabled = true;
+      ahoraNoBtn.disabled = true;
+      enviarBtn.textContent = "Enviando...";
+
+      try {
+        const { error } = await supabase
+          .from("leads_agente")
+          .insert({ nombre, contacto, contexto: ultimoMensajeUsuario || null });
+        if (error) throw new Error(error.message);
+
+        miniForm.remove();
+        const gracias = document.createElement("p");
+        gracias.className = "mt-2 text-sm font-semibold text-hamy-brown";
+        gracias.textContent = `¡Gracias, ${nombre}! Te contactaremos si hace falta.`;
+        burbuja.appendChild(gracias);
+        scrollAbajo();
+      } catch {
+        errorP.textContent = "No se pudo enviar. Inténtalo de nuevo.";
+        errorP.classList.remove("hidden");
+        enviarBtn.disabled = false;
+        ahoraNoBtn.disabled = false;
+        enviarBtn.textContent = "Enviar";
+      }
+    });
+  }
+
+  function abrirChat() {
+    panel?.classList.remove("hidden");
+    panel?.classList.add("flex");
+    toggleBtn?.setAttribute("aria-expanded", "true");
+    if (!abiertoAlgunaVez) {
+      abiertoAlgunaVez = true;
+      agregarBurbuja(saludoInicial().texto, "bot");
+    }
+    input?.focus();
+  }
+
+  function cerrarChat() {
+    panel?.classList.add("hidden");
+    panel?.classList.remove("flex");
+    toggleBtn?.setAttribute("aria-expanded", "false");
+  }
+
+  toggleBtn?.addEventListener("click", () => {
+    if (panel?.classList.contains("hidden")) abrirChat();
+    else cerrarChat();
+  });
+  closeBtn?.addEventListener("click", cerrarChat);
+
+  form?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const texto = input?.value.trim() ?? "";
+    if (!texto || !input) return;
+
+    agregarBurbuja(texto, "usuario");
+    ultimoMensajeUsuario = texto;
+    input.value = "";
+
+    const { respuesta, reconocido } = responderMensaje(texto);
+    agregarBurbuja(respuesta.texto, "bot", respuesta.enlace);
+    respuestasDadas++;
+
+    if (!leadPedido && (!reconocido || respuestasDadas >= 2)) {
+      setTimeout(mostrarCapturaDeContacto, 400);
+    }
+  });
+</script>

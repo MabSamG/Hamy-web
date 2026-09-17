@@ -228,6 +228,26 @@ export async function updateMensajeContactoAtendido(id: string, atendido: boolea
   if (error) throw new Error(`No se pudo actualizar el mensaje: ${error.message}`);
 }
 
+export type LeadAgente = {
+  id: string;
+  creado_en: string;
+  nombre: string;
+  contacto: string;
+  contexto: string | null;
+  atendido: boolean;
+};
+
+export async function listLeadsAgente(): Promise<LeadAgente[]> {
+  const { data, error } = await supabase.from("leads_agente").select("*").order("creado_en", { ascending: false });
+  if (error) throw new Error(`No se pudieron cargar los contactos del agente: ${error.message}`);
+  return (data ?? []) as LeadAgente[];
+}
+
+export async function updateLeadAgenteAtendido(id: string, atendido: boolean): Promise<void> {
+  const { error } = await supabase.from("leads_agente").update({ atendido }).eq("id", id);
+  if (error) throw new Error(`No se pudo actualizar el contacto: ${error.message}`);
+}
+
 export type AnalyticsEvento = {
   id: string;
   tipo: "pagina_vista" | "producto_vista";
