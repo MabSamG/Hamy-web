@@ -39,13 +39,14 @@ function buildEmail(payload: NotifyPayload, adminUrl: string): { subject: string
   switch (payload.type) {
     case "pedido":
       return {
-        subject: `Nuevo pedido de ${payload.clienteNombre} · ${formatPrice(payload.totalCents)}`,
+        subject: `✅ Nuevo pedido pagado de ${payload.clienteNombre} · ${formatPrice(payload.totalCents)}`,
         html: `
-          <p>Nuevo pedido recibido desde el carrito.</p>
+          <p><strong>✅ Pago confirmado.</strong> Este pedido ya está pagado, recibido desde el carrito.</p>
           <ul>
+            <li><strong>Estado del pago:</strong> Pagado</li>
             <li><strong>Cliente:</strong> ${payload.clienteNombre} (${payload.clienteEmail})</li>
             <li><strong>Artículos:</strong> ${payload.itemCount}</li>
-            <li><strong>Total:</strong> ${formatPrice(payload.totalCents)}</li>
+            <li><strong>Total cobrado:</strong> ${formatPrice(payload.totalCents)}</li>
             <li><strong>Referencia:</strong> ${payload.pedidoId.slice(0, 8).toUpperCase()}</li>
           </ul>
           <p><a href="${adminUrl}">Ver el pedido completo en el panel de administración</a> (pestaña Pedidos).</p>
