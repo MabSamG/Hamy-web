@@ -7,6 +7,10 @@
 // palabrasClave (variaciones normalizadas, sin acentos) y su respuesta. El
 // orden importa — la primera regla cuyas palabras clave coincidan gana, asi
 // que las mas especificas deben ir antes que las genericas.
+//
+// El saludo ("hola", "buenas"...) es un caso aparte (ver esSoloSaludo): solo
+// se responde como saludo puro si ESE es todo el mensaje, para que un "hola,
+// ¿hacéis llaveros?" conteste a la pregunta real y no se quede en el saludo.
 
 export type ChatEnlace = { href: string; label: string };
 
@@ -22,6 +26,8 @@ function normalizar(texto: string): string {
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -172,41 +178,88 @@ const REGLAS: Regla[] = [
     ],
     respuesta: {
       texto:
-        "¡Por supuesto! Hacemos piezas para todo tipo de ocasiones especiales 🎉 Si es solo para ti o para regalar una unidad, mira el catálogo. Y si necesitas varias piezas (15 o más) para el evento, mejor pide presupuesto y lo vemos con calma.",
+        "¡Por supuesto! Hacemos piezas para todo tipo de celebraciones 🎉 Si es una pieza suelta o para regalar, mira características y precio en la ficha del producto. Y si necesitas varias para el evento (el pedido mínimo es de 15 unidades), rellena el formulario de encargos y te preparamos un presupuesto.",
       enlaces: [
         { href: "/productos", label: "Ver catálogo" },
-        { href: "/eventos", label: "Pedir presupuesto para varias unidades" },
+        { href: "/eventos", label: "Formulario de encargos" },
       ],
     },
   },
 
   // --- Encargos por volumen sin nombrar una ocasion concreta ---
   {
-    palabrasClave: ["encargo grande", "por volumen", "muchas unidades", "cantidad grande", "detalle para invitados", "pedido grande", "varias unidades"],
+    palabrasClave: ["encargo grande", "por volumen", "muchas unidades", "cantidad grande", "detalle para invitados", "pedido grande", "varias unidades", "pedido minimo"],
     respuesta: {
-      texto: "Para pedidos grandes lo mejor es que nos cuentes los detalles y te preparamos un presupuesto a medida.",
-      enlaces: [{ href: "/eventos", label: "Solicitar presupuesto" }],
+      texto: "Para pedidos grandes el mínimo son 15 unidades. Cuéntanos los detalles en el formulario de encargos y te preparamos un presupuesto a medida.",
+      enlaces: [{ href: "/eventos", label: "Formulario de encargos" }],
     },
   },
 
-  // --- Personalización en general (opciones, fotos, texto propio) ---
+  // --- Personalización en general (opciones, fotos, recuerdos, detalles) ---
   {
     palabrasClave: [
       "personalizar",
       "personalizacion",
+      "personalizada",
+      "personalizado",
       "puedo poner el nombre",
       "nombre que quiera",
       "mandar una foto",
+      "mandar mi foto",
+      "mandar mi propia foto",
       "enviar una foto",
+      "enviar mi foto",
       "subir una foto",
+      "subir mi foto",
       "poner mi foto",
       "poner una foto",
+      "propia foto",
+      "con foto",
+      "con mi foto",
       "texto personalizado",
+      "detalle personalizado",
+      "detalles personalizados",
+      "recuerdo personalizado",
+      "recuerdos personalizados",
+      "regalo personalizado",
       "grabar el nombre",
     ],
     respuesta: {
       texto: "¡Claro que sí! Cada producto tiene sus propias opciones — texto, color, foto... Entra en su ficha y verás justo qué puedes personalizar.",
       enlaces: [{ href: "/productos", label: "Ver productos" }],
+    },
+  },
+
+  // --- Tipos de producto / catálogo (llaveros, marcapáginas, decoración...) ---
+  {
+    palabrasClave: [
+      "llavero",
+      "llaveros",
+      "laveros",
+      "llabero",
+      "llaberos",
+      "marcapaginas",
+      "marcapagina",
+      "marca paginas",
+      "marca pagina",
+      "punto de libro",
+      "puntos de libro",
+      "corazon",
+      "corazones",
+      "decoracion",
+      "decorativo",
+      "decorativa",
+      "recuerdo",
+      "recuerdos",
+      "que productos teneis",
+      "que vendeis",
+      "que teneis",
+      "que hacen",
+      "que haceis",
+    ],
+    respuesta: {
+      texto: "¡Sí, tenemos! En cada ficha de producto puedes ver sus características y el precio actualizado — echa un vistazo al catálogo:",
+      enlaces: [{ href: "/productos", label: "Ver catálogo" }],
     },
   },
 
@@ -238,7 +291,20 @@ const REGLAS: Regla[] = [
 
   // --- Agradecimiento / despedida ---
   {
-    palabrasClave: ["gracias", "vale gracias", "muchas gracias", "perfecto gracias", "adios", "hasta luego", "nos vemos", "chao", "de acuerdo", "vale"],
+    palabrasClave: [
+      "gracias",
+      "vale gracias",
+      "muchas gracias",
+      "perfecto gracias",
+      "adios",
+      "hasta luego",
+      "hasta pronto",
+      "nos vemos",
+      "un saludo",
+      "chao",
+      "de acuerdo",
+      "vale",
+    ],
     respuesta: {
       texto: "¡Un placer! Si te surge cualquier otra cosa, aquí me tienes 💕",
       esDespedida: true,
@@ -246,8 +312,43 @@ const REGLAS: Regla[] = [
   },
 ];
 
+// Saludo: caso aparte porque debe cubrir SOLO el saludo, no cualquier mensaje
+// que empiece por "hola" (p. ej. "hola quiero saber si tenéis llaveros" debe
+// responder a la pregunta, no quedarse en el saludo). Se comprueba palabra a
+// palabra para cubrir cualquier combinación ("holaaa que tal", "buenas,
+// Daniela"...) sin tener que enumerar cada frase completa.
+const PALABRAS_SALUDO = new Set([
+  "hola",
+  "holaa",
+  "holaaa",
+  "holaaaa",
+  "holis",
+  "hey",
+  "ey",
+  "buenas",
+  "buenos",
+  "dias",
+  "tardes",
+  "noches",
+  "que",
+  "tal",
+  "saludos",
+  "daniela",
+]);
+
+function esSoloSaludo(normalizado: string): boolean {
+  const limpio = normalizado.replace(/[¡!¿?.,]/g, "").trim();
+  if (!limpio) return false;
+  const palabras = limpio.split(" ");
+  return palabras.every((palabra) => PALABRAS_SALUDO.has(palabra));
+}
+
 const RESPUESTA_SALUDO: ChatRespuesta = {
   texto: "¡Hola! Soy Daniela, la asistente virtual de Hamy 💕 ¿En qué puedo ayudarte?",
+};
+
+const RESPUESTA_SALUDO_RESPUESTA: ChatRespuesta = {
+  texto: "¡Hola! ¿En qué puedo ayudarte? 😊",
 };
 
 const RESPUESTA_SIN_COINCIDENCIA: ChatRespuesta = {
@@ -262,6 +363,11 @@ export function saludoInicial(): ChatRespuesta {
 
 export function responderMensaje(mensaje: string): { respuesta: ChatRespuesta; reconocido: boolean } {
   const normalizado = normalizar(mensaje);
+
+  if (esSoloSaludo(normalizado)) {
+    return { respuesta: RESPUESTA_SALUDO_RESPUESTA, reconocido: true };
+  }
+
   for (const regla of REGLAS) {
     if (regla.palabrasClave.some((palabra) => contienePalabraClave(normalizado, palabra))) {
       return { respuesta: regla.respuesta, reconocido: true };
