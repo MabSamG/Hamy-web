@@ -307,6 +307,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   import {
     listPedidos,
     updatePedidoEstado,
+    updatePedidoPagoEstado,
     getFotoUrl,
     listProductosAdmin,
     updateProducto,
@@ -324,6 +325,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     updateMensajeContactoAtendido,
     type Pedido,
     type PedidoEstado,
+    type PagoEstado,
     type ProductoAdmin,
     type AnalyticsEvento,
     type CategoriaAdmin,
@@ -382,6 +384,11 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     { value: "recibido", label: "Recibido" },
     { value: "preparando", label: "Preparando" },
     { value: "enviado", label: "Enviado" },
+  ];
+
+  const PAGO_ESTADOS: { value: PagoEstado; label: string }[] = [
+    { value: "pendiente", label: "Pago pendiente" },
+    { value: "pagado", label: "Pagado" },
   ];
 
   function renderPedido(pedido: Pedido): HTMLElement {
@@ -452,7 +459,48 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       }
     });
     estadoWrap.append(select, savedLabel);
-    controls.append(desgloseP, totalP, estadoWrap);
+
+    const pagoWrap = document.createElement("div");
+    pagoWrap.className = "flex items-center gap-2";
+    const pagoSelect = document.createElement("select");
+    pagoSelect.className = `rounded-full border-2 px-3 py-1 text-xs font-semibold focus:outline-none ${
+      pedido.pago_estado === "pagado"
+        ? "border-green-300 bg-green-50 text-green-700"
+        : "border-amber-300 bg-amber-50 text-amber-700"
+    }`;
+    PAGO_ESTADOS.forEach((pago) => {
+      const option = document.createElement("option");
+      option.value = pago.value;
+      option.textContent = pago.label;
+      if (pago.value === pedido.pago_estado) option.selected = true;
+      pagoSelect.appendChild(option);
+    });
+    const pagoSavedLabel = document.createElement("span");
+    pagoSavedLabel.className = "hidden text-xs font-semibold text-green-600";
+    pagoSavedLabel.textContent = "Guardado ✓";
+    pagoSelect.addEventListener("change", async () => {
+      const previous = pedido.pago_estado;
+      pagoSelect.disabled = true;
+      try {
+        await updatePedidoPagoEstado(pedido.id, pagoSelect.value as PagoEstado);
+        pedido.pago_estado = pagoSelect.value as PagoEstado;
+        pagoSavedLabel.classList.remove("hidden");
+        setTimeout(() => pagoSavedLabel.classList.add("hidden"), 2000);
+        pagoSelect.className = `rounded-full border-2 px-3 py-1 text-xs font-semibold focus:outline-none ${
+          pedido.pago_estado === "pagado"
+            ? "border-green-300 bg-green-50 text-green-700"
+            : "border-amber-300 bg-amber-50 text-amber-700"
+        }`;
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "No se pudo actualizar el estado de pago.");
+        pagoSelect.value = previous;
+      } finally {
+        pagoSelect.disabled = false;
+      }
+    });
+    pagoWrap.append(pagoSelect, pagoSavedLabel);
+
+    controls.append(desgloseP, totalP, pagoWrap, estadoWrap);
 
     header.append(meta, controls);
     li.appendChild(header);

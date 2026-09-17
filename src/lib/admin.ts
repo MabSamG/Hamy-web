@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import type { PersonalizationGroup } from "../data/personalization";
 
 export type PedidoEstado = "recibido" | "preparando" | "enviado";
+export type PagoEstado = "pendiente" | "pagado";
 
 export type PedidoItemCampo = {
   label: string;
@@ -38,6 +39,7 @@ export type Pedido = {
   envio_cents: number;
   total_cents: number;
   notas: string | null;
+  pago_estado: PagoEstado;
 };
 
 export async function listPedidos(): Promise<Pedido[]> {
@@ -49,6 +51,12 @@ export async function listPedidos(): Promise<Pedido[]> {
 export async function updatePedidoEstado(id: string, estado: PedidoEstado): Promise<void> {
   const { error } = await supabase.from("pedidos").update({ estado }).eq("id", id);
   if (error) throw new Error(`No se pudo actualizar el estado: ${error.message}`);
+}
+
+/** Manual override — for pagos coordinados fuera de Stripe (efectivo en la recogida, transferencia...). */
+export async function updatePedidoPagoEstado(id: string, pago_estado: PagoEstado): Promise<void> {
+  const { error } = await supabase.from("pedidos").update({ pago_estado }).eq("id", id);
+  if (error) throw new Error(`No se pudo actualizar el estado de pago: ${error.message}`);
 }
 
 /** Bucket is private, so photos need a signed URL rather than a public one. */

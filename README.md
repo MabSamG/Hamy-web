@@ -69,6 +69,41 @@ spam). Cuando tengas un dominio propio, verifícalo en Resend y cambia el remite
 Si `RESEND_API_KEY` está vacía o no configurada, el sitio sigue funcionando con total normalidad: el
 pedido/consulta/mensaje se guarda igual en Supabase, simplemente no se envía el email de aviso.
 
+## 💳 Pago online (Stripe)
+
+El carrito (`/carrito`) guarda el pedido en Supabase (`estado: "recibido"`, `pago_estado: "pendiente"`) y a
+continuación redirige al cliente a Stripe Checkout para pagar. `src/pages/api/crear-pago.ts` crea la sesión de
+pago (recalculando precios y envío desde el catálogo real, no de lo que mande el navegador) y
+`src/pages/api/stripe-webhook.ts` recibe la confirmación de Stripe y marca el pedido como `pago_estado: "pagado"`
+— solo entonces se envía el email de aviso al admin y se limpia el carrito del cliente en `/pedido-confirmado`. Si
+el cliente cancela el pago, el pedido queda guardado como pendiente y el carrito sigue intacto para reintentarlo.
+
+Para activarlo en local:
+
+1. Crea una cuenta en [stripe.com](https://stripe.com) (el modo de pruebas ya viene activo, no hace falta
+   verificar el negocio todavía).
+2. Ve a **Developers > API keys** y copia la **Secret key** (empieza por `sk_test_...`) a `STRIPE_SECRET_KEY`
+   en tu `.env`.
+3. Ve a **Project Settings > API > service_role** en Supabase y copia esa key (distinta de la anon key) a
+   `SUPABASE_SERVICE_ROLE_KEY`. Solo la usan las rutas de servidor (`crear-pago.ts`, `stripe-webhook.ts`), nunca
+   llega al navegador.
+4. Instala el [Stripe CLI](https://docs.stripe.com/stripe-cli) y ejecuta, con el sitio corriendo en local:
+   ```
+   stripe listen --forward-to localhost:4321/api/stripe-webhook
+   ```
+   Copia el `whsec_...` que te muestra a `STRIPE_WEBHOOK_SECRET` en tu `.env` (reinicia `astro dev` después).
+5. Prueba el flujo completo con una [tarjeta de pruebas](https://docs.stripe.com/testing) de Stripe, por ejemplo
+   `4242 4242 4242 4242`, cualquier fecha futura y cualquier CVC.
+
+**Para producción (modo real):** despliega primero el sitio (Netlify), luego en el dashboard de Stripe cambia a
+modo real (Live), repite el paso 2 con la clave `sk_live_...`, y en **Developers > Webhooks** crea un endpoint
+apuntando a `https://tu-dominio/api/stripe-webhook` (evento `checkout.session.completed`) para obtener el
+`STRIPE_WEBHOOK_SECRET` real — configura ambas variables (y `SUPABASE_SERVICE_ROLE_KEY`) como variables de
+entorno del sitio en Netlify, nunca las subas al repositorio.
+
+Un admin puede además marcar un pedido como pagado a mano desde `/admin` (pestaña Pedidos) — útil para pagos en
+efectivo al recoger en Elche o coordinados por otra vía fuera de Stripe.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

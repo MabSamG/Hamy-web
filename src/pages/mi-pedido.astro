@@ -43,6 +43,9 @@ import Layout from "../layouts/Layout.astro";
         </div>
         <span id="resultado-estado" class="rounded-full bg-hamy-cream-dark px-4 py-1.5 text-sm font-semibold text-hamy-brown"></span>
       </div>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <span id="resultado-pago" class="rounded-full px-3 py-1 text-xs font-semibold"></span>
+      </div>
       <p id="resultado-fecha" class="mt-2 text-xs text-hamy-brown-light"></p>
 
       <ul id="resultado-items" class="mt-5 space-y-2 border-t border-hamy-pink-light/20 pt-4 text-sm text-hamy-brown"></ul>
@@ -79,6 +82,7 @@ import Layout from "../layouts/Layout.astro";
   type ResultadoPedido = {
     referencia: string;
     estado: string;
+    pago_estado: string;
     creado_en: string;
     items: PedidoItem[];
     subtotal_cents: number;
@@ -92,6 +96,11 @@ import Layout from "../layouts/Layout.astro";
     recibido: "Recibido",
     preparando: "Preparando",
     enviado: "Enviado",
+  };
+
+  const PAGO_LABELS: Record<string, string> = {
+    pendiente: "Pago pendiente",
+    pagado: "Pagado",
   };
 
   const form = document.getElementById("buscar-form") as HTMLFormElement | null;
@@ -143,6 +152,15 @@ import Layout from "../layouts/Layout.astro";
 
       const estadoEl = document.getElementById("resultado-estado");
       if (estadoEl) estadoEl.textContent = ESTADO_LABELS[pedido.estado] ?? pedido.estado;
+
+      const pagoEl = document.getElementById("resultado-pago");
+      if (pagoEl) {
+        const pagado = pedido.pago_estado === "pagado";
+        pagoEl.textContent = PAGO_LABELS[pedido.pago_estado] ?? pedido.pago_estado;
+        pagoEl.className = `rounded-full px-3 py-1 text-xs font-semibold ${
+          pagado ? "bg-green-50 text-green-700" : "bg-amber-50 text-amber-700"
+        }`;
+      }
 
       const fechaEl = document.getElementById("resultado-fecha");
       if (fechaEl) {

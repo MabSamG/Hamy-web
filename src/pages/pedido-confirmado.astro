@@ -1,0 +1,37 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout title="Pedido confirmado" description="Tu pago se ha completado correctamente.">
+  <section class="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+    <div class="rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-hamy-pink-light/20">
+      <span class="text-5xl" aria-hidden="true">🎉</span>
+      <h1 class="mt-4 font-heading text-3xl font-bold text-hamy-brown">¡Gracias por tu pedido!</h1>
+      <p class="mt-2 text-hamy-brown-light">Tu pago se ha completado correctamente.</p>
+      <p class="mt-2 text-hamy-brown-light">
+        Referencia: <span id="confirmado-referencia" class="font-semibold text-hamy-coral"></span>
+      </p>
+      <p class="mt-2 text-sm text-hamy-brown-light">Te contactaremos en breve para confirmar los detalles de tu pieza.</p>
+      <p class="mt-1 text-sm text-hamy-brown-light">
+        Guarda tu referencia — puedes usarla en <a href="/mi-pedido" class="font-semibold text-hamy-coral hover:underline">Consulta tu pedido</a> para ver su estado más adelante.
+      </p>
+      <a href="/productos" class="btn-secondary mt-6 inline-flex">Seguir comprando</a>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { clearCart } from "../lib/cart";
+
+  const params = new URLSearchParams(window.location.search);
+  const referencia = params.get("referencia");
+
+  const refEl = document.getElementById("confirmado-referencia");
+  if (refEl) refEl.textContent = referencia ?? "—";
+
+  // The pedido was inserted (and the cart left untouched) before redirecting
+  // to Stripe, so it can be recovered if the customer backs out of payment.
+  // Landing here means Stripe confirmed the payment, so the cart is safe to
+  // clear now.
+  clearCart().catch(() => {});
+</script>

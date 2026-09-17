@@ -104,31 +104,23 @@ import Layout from "../layouts/Layout.astro";
 
           <p id="checkout-error" class="hidden text-sm font-semibold text-red-500"></p>
 
-          <button type="submit" id="checkout-submit" class="btn-primary w-full justify-center">Confirmar pedido</button>
+          <button type="submit" id="checkout-submit" class="btn-primary w-full justify-center">Pagar ahora</button>
           <p class="text-xs text-hamy-brown-light">
-            El pago online (Stripe) se activará próximamente. Al confirmar guardamos tu pedido y te contactaremos para coordinar el pago.
+            Al confirmar te llevaremos a la pasarela de pago segura de Stripe. Tu pedido queda guardado antes de pagar,
+            así que si cierras esa pantalla puedes volver aquí y reintentarlo.
           </p>
         </form>
       </div>
     </div>
 
-    <div id="cart-success" class="mt-10 hidden rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-hamy-pink-light/20">
-      <span class="text-5xl" aria-hidden="true">🎉</span>
-      <h2 class="mt-4 font-heading text-2xl font-bold text-hamy-brown">¡Pedido recibido!</h2>
-      <p class="mt-2 text-hamy-brown-light">
-        Referencia: <span id="success-order-id" class="font-semibold text-hamy-coral"></span>
-      </p>
-      <p class="mt-2 text-sm text-hamy-brown-light">Te contactaremos en breve para confirmar los detalles y el pago.</p>
-      <p class="mt-1 text-sm text-hamy-brown-light">
-        Guarda tu referencia — puedes usarla en <a href="/mi-pedido" class="font-semibold text-hamy-coral hover:underline">Consulta tu pedido</a> para ver su estado más adelante.
-      </p>
-      <a href="/productos" class="btn-secondary mt-6 inline-flex">Seguir comprando</a>
+    <div id="cart-cancel-notice" class="mt-6 hidden rounded-2xl bg-amber-50 p-4 text-center text-sm font-semibold text-amber-700">
+      Has cancelado el pago. Tu pedido sigue en el carrito, puedes revisarlo e intentarlo de nuevo cuando quieras.
     </div>
   </section>
 </Layout>
 
 <script>
-  import { getCart, removeFromCart, clearCart, type CartItem } from "../lib/cart";
+  import { getCart, removeFromCart, type CartItem } from "../lib/cart";
   import { formatPrice } from "../data/products";
   import { supabase } from "../lib/supabase";
   import { ZONAS_ENVIO, calcularEnvio, PESO_EMBALAJE_GRAMOS, type ZonaEnvio } from "../data/shipping";
@@ -136,7 +128,7 @@ import Layout from "../layouts/Layout.astro";
   const emptyEl = document.getElementById("cart-empty");
   const loadErrorEl = document.getElementById("cart-load-error");
   const contentEl = document.getElementById("cart-content");
-  const successEl = document.getElementById("cart-success");
+  const cancelNoticeEl = document.getElementById("cart-cancel-notice");
   const itemsList = document.getElementById("cart-items");
   const countEl = document.getElementById("cart-count");
   const subtotalEl = document.getElementById("cart-subtotal");
@@ -310,7 +302,6 @@ import Layout from "../layouts/Layout.astro";
       console.error("No se pudo abrir el carrito (IndexedDB):", err);
       emptyEl?.classList.add("hidden");
       contentEl?.classList.add("hidden");
-      successEl?.classList.add("hidden");
       loadErrorEl?.classList.remove("hidden");
       return;
     }
@@ -319,13 +310,11 @@ import Layout from "../layouts/Layout.astro";
       emptyEl?.classList.remove("hidden");
       loadErrorEl?.classList.add("hidden");
       contentEl?.classList.add("hidden");
-      successEl?.classList.add("hidden");
       return;
     }
 
     emptyEl?.classList.add("hidden");
     loadErrorEl?.classList.add("hidden");
-    successEl?.classList.add("hidden");
     contentEl?.classList.remove("hidden");
 
     if (itemsList) {
@@ -451,36 +440,35 @@ import Layout from "../layouts/Layout.astro";
 
       if (insertError) throw new Error(insertError.message);
 
-      fetch("/api/notify", {
+      if (checkoutSubmit) checkoutSubmit.textContent = "Redirigiendo al pago...";
+
+      const pagoRes = await fetch("/api/crear-pago", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "pedido",
-          pedidoId,
-          clienteNombre: nombre,
-          clienteEmail: email,
-          totalCents,
-          itemCount: currentItems.length,
-        }),
-      }).catch(() => {});
+        body: JSON.stringify({ pedidoId }),
+      });
+      const pagoData = await pagoRes.json();
+      if (!pagoRes.ok || !pagoData.url) {
+        throw new Error(pagoData.error || "No se pudo iniciar el pago. Tu pedido quedó guardado, contáctanos para coordinarlo.");
+      }
 
-      await clearCart();
-
-      const successOrderId = document.getElementById("success-order-id");
-      if (successOrderId) successOrderId.textContent = referencia;
-
-      contentEl?.classList.add("hidden");
-      successEl?.classList.remove("hidden");
-      successEl?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Cart stays intact — it's only cleared once Stripe confirms the
+      // payment on /pedido-confirmado, so a cancelled/abandoned payment
+      // doesn't lose the customer's personalization work.
+      window.location.href = pagoData.url;
     } catch (err) {
       showCheckoutError(err instanceof Error ? err.message : "No se pudo confirmar el pedido. Inténtalo de nuevo.");
     } finally {
       if (checkoutSubmit) {
         checkoutSubmit.disabled = false;
-        checkoutSubmit.textContent = "Confirmar pedido";
+        checkoutSubmit.textContent = "Pagar ahora";
       }
     }
   });
+
+  if (new URLSearchParams(window.location.search).get("pago") === "cancelado") {
+    cancelNoticeEl?.classList.remove("hidden");
+  }
 
   renderZonaOpciones();
   updateDireccionVisibility();

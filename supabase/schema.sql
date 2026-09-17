@@ -143,7 +143,12 @@ create table if not exists public.pedidos (
   envio_cents integer not null default 0,
   total_cents integer not null,
   notas text,
-  stripe_payment_intent_id text
+  -- pago_estado refleja el pago con Stripe (independiente de "estado", que es
+  -- el flujo de preparacion/envio). Lo actualiza el webhook de Stripe al
+  -- confirmarse el pago, o el admin a mano para pagos en efectivo/recogida.
+  pago_estado text not null default 'pendiente' check (pago_estado in ('pendiente', 'pagado')),
+  stripe_payment_intent_id text,
+  stripe_session_id text
 );
 
 -- Para proyectos donde la tabla ya existia antes de estas columnas: los
@@ -170,6 +175,18 @@ alter table public.pedidos add column if not exists peso_total_gramos integer;
 update public.pedidos set peso_total_gramos = 0 where peso_total_gramos is null;
 alter table public.pedidos alter column peso_total_gramos set not null;
 alter table public.pedidos alter column peso_total_gramos set default 0;
+
+-- Para proyectos donde la tabla ya existia antes de esta columna (pedidos
+-- previos al pago con Stripe): se asumen pendientes de pago hasta que un
+-- admin los marque a mano, ya que no hay forma de saber su estado real.
+alter table public.pedidos add column if not exists pago_estado text;
+update public.pedidos set pago_estado = 'pendiente' where pago_estado is null;
+alter table public.pedidos alter column pago_estado set not null;
+alter table public.pedidos alter column pago_estado set default 'pendiente';
+alter table public.pedidos drop constraint if exists pedidos_pago_estado_check;
+alter table public.pedidos add constraint pedidos_pago_estado_check check (pago_estado in ('pendiente', 'pagado'));
+
+alter table public.pedidos add column if not exists stripe_session_id text;
 
 alter table public.pedidos enable row level security;
 
@@ -484,6 +501,7 @@ create function public.buscar_pedido(p_referencia text, p_email text)
 returns table (
   referencia text,
   estado text,
+  pago_estado text,
   creado_en timestamptz,
   items jsonb,
   subtotal_cents integer,
@@ -496,7 +514,7 @@ language sql
 security definer
 set search_path = public
 as $$
-  select p.referencia, p.estado, p.creado_en, p.items, p.subtotal_cents, p.zona_envio, p.peso_total_gramos, p.envio_cents, p.total_cents
+  select p.referencia, p.estado, p.pago_estado, p.creado_en, p.items, p.subtotal_cents, p.zona_envio, p.peso_total_gramos, p.envio_cents, p.total_cents
   from public.pedidos p
   where p.referencia = upper(trim(p_referencia))
     and lower(p.cliente_email) = lower(trim(p_email))
