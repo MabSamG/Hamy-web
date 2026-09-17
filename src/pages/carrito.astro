@@ -87,7 +87,7 @@ import Layout from "../layouts/Layout.astro";
             ></textarea>
           </div>
           <p id="recogida-aviso" class="hidden rounded-xl bg-hamy-cream-dark/60 px-3 py-2 text-xs text-hamy-brown-light">
-            Sin dirección de envío — te avisaremos por email o teléfono en cuanto tu pedido esté listo para recoger.
+            Sin dirección de envío — te avisaremos por email o teléfono en cuanto tu pedido esté listo para recoger en Elche.
           </p>
           <p id="envio-excedido-aviso" class="hidden rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
             Tu pedido supera el peso que cubrimos con tarifa automática (2 kg). Contáctanos directamente para
@@ -376,7 +376,7 @@ import Layout from "../layouts/Layout.astro";
       return;
     }
     if (zona !== "recogida" && !direccion) {
-      showCheckoutError("Indica la dirección de envío o elige recogida en persona.");
+      showCheckoutError("Indica la dirección de envío o elige recogida en Elche.");
       return;
     }
     if (currentItems.length === 0) {

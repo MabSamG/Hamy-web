@@ -9,7 +9,7 @@ export const ZONAS_ENVIO: OpcionZona[] = [
   { value: "peninsula", label: "Envío a Península" },
   { value: "baleares", label: "Envío a Baleares" },
   { value: "canarias", label: "Envío a Canarias" },
-  { value: "recogida", label: "Recogida en persona" },
+  { value: "recogida", label: "Recogida en Elche" },
 ];
 
 export function zonaLabel(zona: string): string {
