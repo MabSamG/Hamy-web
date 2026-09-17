@@ -306,7 +306,12 @@ const REGLAS: Regla[] = [
       "vale",
     ],
     respuesta: {
-      texto: "¡Un placer! Si te surge cualquier otra cosa, aquí me tienes 💕",
+      texto:
+        "¡Un placer! Si más adelante quieres reservar o encargar algo, escríbenos por WhatsApp, usa el formulario de contacto, o déjame aquí tu nombre y contacto y te escribimos nosotros 😊",
+      enlaces: [
+        { href: "https://wa.me/34600000000", label: "Escríbenos por WhatsApp" },
+        { href: "/contacto", label: "Ir a contacto" },
+      ],
       esDespedida: true,
     },
   },
@@ -357,21 +362,50 @@ const RESPUESTA_SIN_COINCIDENCIA: ChatRespuesta = {
   enlaces: [{ href: "/contacto", label: "Ir a contacto" }],
 };
 
+// Solo pedimos el nombre/contacto del visitante cuando hay una intención real
+// de reservar, comprar o encargar — no por el simple hecho de preguntar o
+// informarse (envíos, precios, materiales...), que no justifica pedir datos.
+const PALABRAS_INTENCION_COMPRA = [
+  "reservar",
+  "como reservo",
+  "comprar",
+  "comprarlo",
+  "encargar",
+  "encargarlo",
+  "como encargo",
+  "hacer un encargo",
+  "hacer un pedido",
+  "quiero pedir",
+  "quiero pedirlo",
+  "quiero encargar",
+  "quiero encargarlo",
+  "quiero comprar",
+  "quiero comprarlo",
+  "quiero reservar",
+  "confirmar mi pedido",
+  "confirmar el pedido",
+];
+
+function tieneIntencionDeCompra(normalizado: string): boolean {
+  return PALABRAS_INTENCION_COMPRA.some((palabra) => contienePalabraClave(normalizado, palabra));
+}
+
 export function saludoInicial(): ChatRespuesta {
   return RESPUESTA_SALUDO;
 }
 
-export function responderMensaje(mensaje: string): { respuesta: ChatRespuesta; reconocido: boolean } {
+export function responderMensaje(mensaje: string): { respuesta: ChatRespuesta; reconocido: boolean; intencionDeCompra: boolean } {
   const normalizado = normalizar(mensaje);
+  const intencionDeCompra = tieneIntencionDeCompra(normalizado);
 
   if (esSoloSaludo(normalizado)) {
-    return { respuesta: RESPUESTA_SALUDO_RESPUESTA, reconocido: true };
+    return { respuesta: RESPUESTA_SALUDO_RESPUESTA, reconocido: true, intencionDeCompra };
   }
 
   for (const regla of REGLAS) {
     if (regla.palabrasClave.some((palabra) => contienePalabraClave(normalizado, palabra))) {
-      return { respuesta: regla.respuesta, reconocido: true };
+      return { respuesta: regla.respuesta, reconocido: true, intencionDeCompra };
     }
   }
-  return { respuesta: RESPUESTA_SIN_COINCIDENCIA, reconocido: false };
+  return { respuesta: RESPUESTA_SIN_COINCIDENCIA, reconocido: false, intencionDeCompra };
 }

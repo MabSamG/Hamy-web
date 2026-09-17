@@ -69,7 +69,6 @@
   const tooltip = document.getElementById("chat-tooltip");
 
   let abiertoAlgunaVez = false;
-  let respuestasDadas = 0;
   let leadPedido = false;
   let ultimoMensajeUsuario = "";
   let tooltipOcultoTimer: ReturnType<typeof setTimeout> | undefined;
@@ -114,6 +113,10 @@
       a.href = enlace.href;
       a.textContent = enlace.label;
       a.className = "mt-2 block text-xs font-bold text-hamy-coral underline underline-offset-2";
+      if (enlace.href.startsWith("http")) {
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      }
       burbuja.appendChild(a);
     }
 
@@ -248,11 +251,13 @@
     ultimoMensajeUsuario = texto;
     input.value = "";
 
-    const { respuesta, reconocido } = responderMensaje(texto);
+    const { respuesta, intencionDeCompra } = responderMensaje(texto);
     agregarBurbuja(respuesta.texto, "bot", respuesta.enlaces);
-    respuestasDadas++;
 
-    if (!leadPedido && !respuesta.esDespedida && (!reconocido || respuestasDadas >= 2)) {
+    // Solo pedimos el contacto cuando hay una intención real de reservar/comprar/encargar,
+    // o al despedirse (para dejar la puerta abierta a que sigan por WhatsApp/contacto/aquí
+    // mismo) — no en cualquier pregunta informativa, por muchas que hagan.
+    if (!leadPedido && (intencionDeCompra || respuesta.esDespedida)) {
       leadPedido = true;
       setTimeout(mostrarCapturaDeContacto, 400);
     }
