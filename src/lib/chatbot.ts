@@ -41,7 +41,7 @@ const REGLAS: Regla[] = [
   {
     palabrasClave: ["estado de mi pedido", "donde esta mi pedido", "seguimiento", "rastrear", "en que va mi pedido", "mi pedido"],
     respuesta: {
-      texto: "Puedes consultar el estado de tu pedido con tu número de referencia y tu email.",
+      texto: "¡Claro! Con tu número de referencia y el email que usaste al pedir puedes ver en qué punto va tu pedido aquí:",
       enlaces: [{ href: "/mi-pedido", label: "Consultar mi pedido" }],
     },
   },
@@ -74,7 +74,7 @@ const REGLAS: Regla[] = [
     ],
     respuesta: {
       texto:
-        "Los costes de envío son: Península 7,50 €, Baleares 10 €, Canarias 14 €. También puedes recoger tu pedido gratis en Elche.",
+        "Te cuento: a Península son 7,50 €, a Baleares 10 € y a Canarias 14 €. Y si te viene mejor, también puedes recogerlo tú misma/o en Elche sin coste 😊",
     },
   },
 
@@ -83,7 +83,7 @@ const REGLAS: Regla[] = [
     palabrasClave: ["devolucion", "devoluciones", "puedo devolver", "cambios", "cambiar el pedido", "reembolso", "garantia", "no me gusta puedo"],
     respuesta: {
       texto:
-        "Al ser piezas personalizadas y hechas a mano, no se aceptan devoluciones salvo defecto de fabricación. Tienes el detalle completo en nuestros Términos y condiciones.",
+        "Como cada pieza se hace especialmente para ti, no podemos aceptar devoluciones salvo que tenga algún defecto de fabricación. Lo tienes explicado con más detalle aquí:",
       enlaces: [{ href: "/legal/terminos", label: "Ver términos y condiciones" }],
     },
   },
@@ -104,7 +104,7 @@ const REGLAS: Regla[] = [
     ],
     respuesta: {
       texto:
-        "Están hechas en resina epoxi: son resistentes para el uso diario, pero te recomendamos evitar golpes fuertes y la exposición prolongada al sol o al agua.",
+        "Está hecho en resina epoxi, así que aguanta bien el día a día. Eso sí, mejor evitar golpes fuertes y que le dé el sol o el agua durante mucho rato seguido.",
     },
   },
 
@@ -122,7 +122,7 @@ const REGLAS: Regla[] = [
     ],
     respuesta: {
       texto:
-        "El tiempo de personalización depende de la pieza y de la cantidad que pidas. Contáctanos y te damos un plazo exacto para tu caso.",
+        "Eso depende un poco de la pieza y de cuántas unidades necesites. Cuéntanos tu caso y te decimos un plazo concreto sin compromiso.",
     },
   },
 
@@ -143,7 +143,8 @@ const REGLAS: Regla[] = [
       "cuando lo tendria",
     ],
     respuesta: {
-      texto: "Los pedidos salen en 5-7 días desde que la pieza está terminada (cada pieza se hace a mano y bajo pedido).",
+      texto:
+        "Normalmente tardamos entre 5 y 7 días en enviarlo desde que la pieza está lista — cada una se hace a mano y bajo pedido, así que no las tenemos hechas de antemano 🙂",
     },
   },
 
@@ -171,7 +172,7 @@ const REGLAS: Regla[] = [
     ],
     respuesta: {
       texto:
-        "¡Sí! Hacemos piezas personalizadas para cualquier ocasión 🎉 Si buscas una pieza suelta, échale un ojo al catálogo. Si son varias unidades (15+) para un evento, mejor pide presupuesto por el formulario de eventos.",
+        "¡Por supuesto! Hacemos piezas para todo tipo de ocasiones especiales 🎉 Si es solo para ti o para regalar una unidad, mira el catálogo. Y si necesitas varias piezas (15 o más) para el evento, mejor pide presupuesto y lo vemos con calma.",
       enlaces: [
         { href: "/productos", label: "Ver catálogo" },
         { href: "/eventos", label: "Pedir presupuesto para varias unidades" },
@@ -183,7 +184,7 @@ const REGLAS: Regla[] = [
   {
     palabrasClave: ["encargo grande", "por volumen", "muchas unidades", "cantidad grande", "detalle para invitados", "pedido grande", "varias unidades"],
     respuesta: {
-      texto: "Para encargos por volumen, cuéntanos los detalles y te preparamos un presupuesto.",
+      texto: "Para pedidos grandes lo mejor es que nos cuentes los detalles y te preparamos un presupuesto a medida.",
       enlaces: [{ href: "/eventos", label: "Solicitar presupuesto" }],
     },
   },
@@ -204,7 +205,7 @@ const REGLAS: Regla[] = [
       "grabar el nombre",
     ],
     respuesta: {
-      texto: "Cada producto tiene sus propias opciones de personalización (texto, color, foto...). Puedes verlas en la ficha de cada producto.",
+      texto: "¡Claro que sí! Cada producto tiene sus propias opciones — texto, color, foto... Entra en su ficha y verás justo qué puedes personalizar.",
       enlaces: [{ href: "/productos", label: "Ver productos" }],
     },
   },
@@ -213,7 +214,7 @@ const REGLAS: Regla[] = [
   {
     palabrasClave: ["cuanto cuesta", "cuanto vale", "precio", "precios", "que precios manejais", "tarifas"],
     respuesta: {
-      texto: "Los precios varían según la pieza, desde 3,50 €. Puedes ver el catálogo completo con precios actualizados aquí.",
+      texto: "Depende de la pieza que elijas, pero los precios empiezan desde 3,50 €. Échale un vistazo al catálogo para verlos todos.",
       enlaces: [{ href: "/productos", label: "Ver catálogo" }],
     },
   },
@@ -222,7 +223,7 @@ const REGLAS: Regla[] = [
   {
     palabrasClave: ["como pido", "como compro", "como hago un pedido", "quiero comprar", "hacer un pedido", "catalogo", "ver productos", "donde compro"],
     respuesta: {
-      texto: "Puedes hacer tu pedido directamente desde nuestro catálogo, eligiendo el producto y personalizándolo a tu gusto.",
+      texto: "Es superfácil: entras al catálogo, eliges tu producto y lo personalizas a tu gusto antes de comprarlo.",
       enlaces: [{ href: "/productos", label: "Ver productos" }],
     },
   },
@@ -231,7 +232,7 @@ const REGLAS: Regla[] = [
   {
     palabrasClave: ["pago", "pagar", "tarjeta", "stripe", "metodo de pago", "metodos de pago", "como se paga", "formas de pago"],
     respuesta: {
-      texto: "Aceptamos pago con tarjeta de forma segura a través de Stripe, directamente al finalizar tu pedido.",
+      texto: "Pagas con tarjeta de forma segura a través de Stripe, justo al terminar tu pedido — así de sencillo.",
     },
   },
 
@@ -239,7 +240,7 @@ const REGLAS: Regla[] = [
   {
     palabrasClave: ["gracias", "vale gracias", "muchas gracias", "perfecto gracias", "adios", "hasta luego", "nos vemos", "chao", "de acuerdo", "vale"],
     respuesta: {
-      texto: "¡De nada! Si necesitas cualquier otra cosa, aquí estoy 💕",
+      texto: "¡Un placer! Si te surge cualquier otra cosa, aquí me tienes 💕",
       esDespedida: true,
     },
   },
@@ -250,7 +251,8 @@ const RESPUESTA_SALUDO: ChatRespuesta = {
 };
 
 const RESPUESTA_SIN_COINCIDENCIA: ChatRespuesta = {
-  texto: "No he sabido responder a eso con la información que tengo. Escríbenos por WhatsApp o por el formulario de contacto y te ayudamos encantados.",
+  texto:
+    "Uy, esa se me escapa un poco 🙈 Puedo ayudarte con envíos, precios, personalización o cómo hacer tu pedido. Y si prefieres, hablamos directamente por aquí y te lo resolvemos:",
   enlaces: [{ href: "/contacto", label: "Ir a contacto" }],
 };
 

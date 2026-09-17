@@ -131,7 +131,7 @@
     burbuja.className = "max-w-[90%] break-words rounded-2xl rounded-bl-sm bg-white px-3 py-3 text-hamy-brown ring-1 ring-hamy-pink-light/20";
 
     const intro = document.createElement("p");
-    intro.textContent = "Si quieres, déjanos tu nombre y un email o teléfono y te contactamos si hace falta 😊";
+    intro.textContent = "¡Genial! Si quieres, dime tu nombre y cómo contactarte y le echamos un ojo enseguida 😊";
     burbuja.appendChild(intro);
 
     const miniForm = document.createElement("form");
@@ -178,7 +178,7 @@
       miniForm.remove();
       const nota = document.createElement("p");
       nota.className = "mt-2 text-xs text-hamy-brown-light";
-      nota.textContent = "De acuerdo, aquí sigo si necesitas algo más 🙂";
+      nota.textContent = "Vale, sin problema — aquí sigo si me necesitas 🙂";
       burbuja.appendChild(nota);
     });
 
@@ -202,7 +202,7 @@
         miniForm.remove();
         const gracias = document.createElement("p");
         gracias.className = "mt-2 text-sm font-semibold text-hamy-brown";
-        gracias.textContent = `¡Gracias, ${nombre}! Te contactaremos si hace falta.`;
+        gracias.textContent = `¡Gracias, ${nombre}! Le echamos un ojo y te contactamos en cuanto podamos 😊`;
         burbuja.appendChild(gracias);
         scrollAbajo();
       } catch {
