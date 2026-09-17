@@ -1,0 +1,56 @@
+---
+---
+
+<div
+  id="cookie-banner"
+  class="fixed inset-x-0 bottom-0 z-[60] hidden border-t border-hamy-pink-light/30 bg-white px-4 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] sm:px-6"
+  role="dialog"
+  aria-label="Aviso de cookies"
+>
+  <div class="mx-auto flex max-w-6xl flex-col items-center gap-3 sm:flex-row sm:justify-between">
+    <p class="text-sm text-hamy-brown-light">
+      Usamos cookies y almacenamiento técnico necesarios para que funcionen el carrito y el acceso al panel de
+      administración. No usamos cookies de publicidad ni analítica de terceros; si en el futuro añadimos alguna,
+      pediremos tu consentimiento antes de activarla. Más información en nuestra
+      <a href="/legal/cookies" class="font-semibold text-hamy-coral hover:underline">Política de cookies</a>.
+    </p>
+    <div class="flex shrink-0 gap-3">
+      <button type="button" id="cookie-reject" class="btn-secondary whitespace-nowrap px-4 py-2 text-sm">Solo necesarias</button>
+      <button type="button" id="cookie-accept" class="btn-primary whitespace-nowrap px-4 py-2 text-sm">Aceptar todas</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "hamy-cookie-consent";
+
+  const banner = document.getElementById("cookie-banner");
+  const acceptBtn = document.getElementById("cookie-accept");
+  const rejectBtn = document.getElementById("cookie-reject");
+
+  function hasChoice(): boolean {
+    try {
+      return localStorage.getItem(STORAGE_KEY) !== null;
+    } catch {
+      // Almacenamiento bloqueado (modo incógnito estricto, ajustes de privacidad): no insistimos
+      // mostrando el banner en cada carga, simplemente no lo mostramos.
+      return true;
+    }
+  }
+
+  function saveChoice(value: "all" | "necessary") {
+    try {
+      localStorage.setItem(STORAGE_KEY, value);
+    } catch {
+      // Ver comentario en hasChoice — sin storage no hay nada que persistir.
+    }
+    banner?.classList.add("hidden");
+  }
+
+  if (!hasChoice()) {
+    banner?.classList.remove("hidden");
+  }
+
+  acceptBtn?.addEventListener("click", () => saveChoice("all"));
+  rejectBtn?.addEventListener("click", () => saveChoice("necessary"));
+</script>
