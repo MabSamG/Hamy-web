@@ -21,6 +21,14 @@ import Layout from "../layouts/Layout.astro";
           <span>Artículos</span>
           <span id="cart-count">0</span>
         </div>
+        <div class="mt-2 flex items-center justify-between text-sm text-hamy-brown-light">
+          <span>Subtotal</span>
+          <span id="cart-subtotal">0,00 €</span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-sm text-hamy-brown-light">
+          <span>Envío</span>
+          <span id="cart-shipping">0,00 €</span>
+        </div>
         <div class="mt-2 flex items-center justify-between text-lg font-bold text-hamy-brown">
           <span>Total</span>
           <span id="cart-total">0,00 €</span>
@@ -55,13 +63,20 @@ import Layout from "../layouts/Layout.astro";
             />
           </div>
           <div>
-            <label for="cliente-direccion" class="block text-sm font-semibold text-hamy-brown">Dirección de envío</label>
+            <label class="block text-sm font-semibold text-hamy-brown">Entrega *</label>
+            <div id="zona-envio-opciones" class="mt-1 space-y-2"></div>
+          </div>
+          <div id="direccion-wrap">
+            <label for="cliente-direccion" class="block text-sm font-semibold text-hamy-brown">Dirección de envío *</label>
             <textarea
               id="cliente-direccion"
               rows="2"
               class="mt-1 w-full rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
             ></textarea>
           </div>
+          <p id="recogida-aviso" class="hidden rounded-xl bg-hamy-cream-dark/60 px-3 py-2 text-xs text-hamy-brown-light">
+            Sin dirección de envío — te avisaremos por email o teléfono en cuanto tu pedido esté listo para recoger.
+          </p>
           <div>
             <label for="cliente-notas" class="block text-sm font-semibold text-hamy-brown">Notas (opcional)</label>
             <textarea
@@ -100,18 +115,78 @@ import Layout from "../layouts/Layout.astro";
   import { getCart, removeFromCart, clearCart, type CartItem } from "../lib/cart";
   import { formatPrice } from "../data/products";
   import { supabase } from "../lib/supabase";
+  import { OPCIONES_ENVIO, getOpcionEnvio, type ZonaEnvio } from "../data/shipping";
 
   const emptyEl = document.getElementById("cart-empty");
   const contentEl = document.getElementById("cart-content");
   const successEl = document.getElementById("cart-success");
   const itemsList = document.getElementById("cart-items");
   const countEl = document.getElementById("cart-count");
+  const subtotalEl = document.getElementById("cart-subtotal");
+  const shippingEl = document.getElementById("cart-shipping");
   const totalEl = document.getElementById("cart-total");
+  const zonaOpcionesEl = document.getElementById("zona-envio-opciones");
+  const direccionWrap = document.getElementById("direccion-wrap");
+  const direccionInput = document.getElementById("cliente-direccion") as HTMLTextAreaElement | null;
+  const recogidaAviso = document.getElementById("recogida-aviso");
   const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
   const checkoutError = document.getElementById("checkout-error");
   const checkoutSubmit = document.getElementById("checkout-submit") as HTMLButtonElement | null;
 
   let currentItems: CartItem[] = [];
+
+  function getSelectedZona(): ZonaEnvio {
+    const checked = zonaOpcionesEl?.querySelector<HTMLInputElement>('input[name="zona-envio"]:checked');
+    return (checked?.value as ZonaEnvio) ?? OPCIONES_ENVIO[0].value;
+  }
+
+  function renderZonaOpciones() {
+    if (!zonaOpcionesEl) return;
+    zonaOpcionesEl.innerHTML = "";
+    OPCIONES_ENVIO.forEach((opcion, i) => {
+      const label = document.createElement("label");
+      label.className =
+        "flex cursor-pointer items-center justify-between gap-2 rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown has-[:checked]:border-hamy-coral has-[:checked]:bg-white";
+
+      const left = document.createElement("span");
+      left.className = "flex items-center gap-2";
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "zona-envio";
+      radio.value = opcion.value;
+      radio.className = "accent-hamy-coral";
+      if (i === 0) radio.checked = true;
+      radio.addEventListener("change", () => {
+        updateDireccionVisibility();
+        updateTotals();
+      });
+      const text = document.createElement("span");
+      text.textContent = opcion.label;
+      left.append(radio, text);
+
+      const price = document.createElement("span");
+      price.className = "font-semibold";
+      price.textContent = opcion.priceCents === 0 ? "Gratis" : formatPrice(opcion.priceCents);
+
+      label.append(left, price);
+      zonaOpcionesEl.appendChild(label);
+    });
+  }
+
+  function updateDireccionVisibility() {
+    const isRecogida = getSelectedZona() === "recogida";
+    direccionWrap?.classList.toggle("hidden", isRecogida);
+    recogidaAviso?.classList.toggle("hidden", !isRecogida);
+    if (direccionInput) direccionInput.required = !isRecogida;
+  }
+
+  function updateTotals() {
+    const subtotal = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
+    const envio = getOpcionEnvio(getSelectedZona())?.priceCents ?? 0;
+    if (subtotalEl) subtotalEl.textContent = formatPrice(subtotal);
+    if (shippingEl) shippingEl.textContent = envio === 0 ? "Gratis" : formatPrice(envio);
+    if (totalEl) totalEl.textContent = formatPrice(subtotal + envio);
+  }
 
   function findFirstPhoto(item: CartItem): File | null {
     for (const group of Object.values(item.personalization)) {
@@ -197,9 +272,8 @@ import Layout from "../layouts/Layout.astro";
       currentItems.forEach((item) => itemsList.appendChild(renderItem(item)));
     }
 
-    const total = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
     if (countEl) countEl.textContent = String(currentItems.length);
-    if (totalEl) totalEl.textContent = formatPrice(total);
+    updateTotals();
   }
 
   function showCheckoutError(message: string) {
@@ -222,9 +296,15 @@ import Layout from "../layouts/Layout.astro";
     const telefono = (document.getElementById("cliente-telefono") as HTMLInputElement).value.trim();
     const direccion = (document.getElementById("cliente-direccion") as HTMLTextAreaElement).value.trim();
     const notas = (document.getElementById("cliente-notas") as HTMLTextAreaElement).value.trim();
+    const zona = getSelectedZona();
+    const opcionEnvio = getOpcionEnvio(zona);
 
     if (!nombre || !email || !telefono) {
       showCheckoutError("Completa tu nombre, email y teléfono para confirmar el pedido.");
+      return;
+    }
+    if (zona !== "recogida" && !direccion) {
+      showCheckoutError("Indica la dirección de envío o elige recogida en persona.");
       return;
     }
     if (currentItems.length === 0) {
@@ -271,7 +351,9 @@ import Layout from "../layouts/Layout.astro";
         });
       }
 
-      const totalCents = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
+      const subtotalCents = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
+      const envioCents = opcionEnvio?.priceCents ?? 0;
+      const totalCents = subtotalCents + envioCents;
 
       const { error: insertError } = await supabase.from("pedidos").insert({
         id: pedidoId,
@@ -279,8 +361,11 @@ import Layout from "../layouts/Layout.astro";
         cliente_nombre: nombre,
         cliente_email: email,
         cliente_telefono: telefono || null,
-        cliente_direccion: direccion || null,
+        cliente_direccion: zona === "recogida" ? null : direccion,
         items,
+        subtotal_cents: subtotalCents,
+        zona_envio: zona,
+        envio_cents: envioCents,
         total_cents: totalCents,
         notas: notas || null,
       });
@@ -318,5 +403,7 @@ import Layout from "../layouts/Layout.astro";
     }
   });
 
+  renderZonaOpciones();
+  updateDireccionVisibility();
   loadCart();
 </script>

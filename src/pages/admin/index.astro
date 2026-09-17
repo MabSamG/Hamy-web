@@ -319,6 +319,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     type ConsultaEvento,
     type MensajeContacto,
   } from "../../lib/admin";
+  import { envioLabel } from "../../data/shipping";
   import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
   const loginSection = document.getElementById("admin-login");
@@ -388,14 +389,23 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     clientP.textContent = `${pedido.cliente_nombre} · ${pedido.cliente_email}`;
     const contactP = document.createElement("p");
     contactP.className = "text-xs text-hamy-brown-light";
-    contactP.textContent = [pedido.cliente_telefono, pedido.cliente_direccion].filter(Boolean).join(" · ") || "Sin datos adicionales";
-    meta.append(dateP, clientP, contactP);
+    const direccionTexto = pedido.zona_envio === "recogida" ? "Recogida en persona" : pedido.cliente_direccion;
+    contactP.textContent = [pedido.cliente_telefono, direccionTexto].filter(Boolean).join(" · ") || "Sin datos adicionales";
+    const entregaP = document.createElement("p");
+    entregaP.className = "text-xs font-semibold text-hamy-brown-light";
+    entregaP.textContent = `Entrega: ${envioLabel(pedido.zona_envio)}`;
+    meta.append(dateP, clientP, contactP, entregaP);
 
     const controls = document.createElement("div");
     controls.className = "flex flex-col items-end gap-1";
+    const desgloseP = document.createElement("p");
+    desgloseP.className = "text-xs text-hamy-brown-light";
+    desgloseP.textContent = `Subtotal ${formatPriceCents(pedido.subtotal_cents)} + envío ${
+      pedido.envio_cents === 0 ? "gratis" : formatPriceCents(pedido.envio_cents)
+    }`;
     const totalP = document.createElement("p");
     totalP.className = "font-bold text-hamy-coral";
-    totalP.textContent = formatPriceCents(pedido.total_cents);
+    totalP.textContent = `Total ${formatPriceCents(pedido.total_cents)}`;
 
     const estadoWrap = document.createElement("div");
     estadoWrap.className = "flex items-center gap-2";
@@ -428,7 +438,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       }
     });
     estadoWrap.append(select, savedLabel);
-    controls.append(totalP, estadoWrap);
+    controls.append(desgloseP, totalP, estadoWrap);
 
     header.append(meta, controls);
     li.appendChild(header);

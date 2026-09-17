@@ -32,6 +32,9 @@ export type Pedido = {
   cliente_telefono: string | null;
   cliente_direccion: string | null;
   items: PedidoItem[];
+  subtotal_cents: number;
+  zona_envio: string;
+  envio_cents: number;
   total_cents: number;
   notas: string | null;
 };

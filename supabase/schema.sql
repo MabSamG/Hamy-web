@@ -126,10 +126,36 @@ create table if not exists public.pedidos (
   --   }
   -- }
   items jsonb not null,
+  -- subtotal_cents = solo productos; envio_cents = coste de envio segun la
+  -- zona elegida; total_cents = subtotal_cents + envio_cents (lo que se
+  -- muestra como total final al cliente y en el admin).
+  subtotal_cents integer not null default 0,
+  zona_envio text not null default 'peninsula' check (zona_envio in ('peninsula', 'baleares', 'canarias', 'recogida')),
+  envio_cents integer not null default 0,
   total_cents integer not null,
   notas text,
   stripe_payment_intent_id text
 );
+
+-- Para proyectos donde la tabla ya existia antes de estas columnas: los
+-- pedidos previos no tenian gastos de envio, asi que su subtotal es el
+-- total que ya tenian guardado.
+alter table public.pedidos add column if not exists subtotal_cents integer;
+update public.pedidos set subtotal_cents = total_cents where subtotal_cents is null;
+alter table public.pedidos alter column subtotal_cents set not null;
+alter table public.pedidos alter column subtotal_cents set default 0;
+
+alter table public.pedidos add column if not exists zona_envio text;
+update public.pedidos set zona_envio = 'peninsula' where zona_envio is null;
+alter table public.pedidos alter column zona_envio set not null;
+alter table public.pedidos alter column zona_envio set default 'peninsula';
+alter table public.pedidos drop constraint if exists pedidos_zona_envio_check;
+alter table public.pedidos add constraint pedidos_zona_envio_check check (zona_envio in ('peninsula', 'baleares', 'canarias', 'recogida'));
+
+alter table public.pedidos add column if not exists envio_cents integer;
+update public.pedidos set envio_cents = 0 where envio_cents is null;
+alter table public.pedidos alter column envio_cents set not null;
+alter table public.pedidos alter column envio_cents set default 0;
 
 alter table public.pedidos enable row level security;
 
@@ -437,19 +463,24 @@ alter table public.pedidos alter column referencia set not null;
 
 create unique index if not exists pedidos_referencia_idx on public.pedidos (referencia);
 
-create or replace function public.buscar_pedido(p_referencia text, p_email text)
+drop function if exists public.buscar_pedido(text, text);
+
+create function public.buscar_pedido(p_referencia text, p_email text)
 returns table (
   referencia text,
   estado text,
   creado_en timestamptz,
   items jsonb,
+  subtotal_cents integer,
+  zona_envio text,
+  envio_cents integer,
   total_cents integer
 )
 language sql
 security definer
 set search_path = public
 as $$
-  select p.referencia, p.estado, p.creado_en, p.items, p.total_cents
+  select p.referencia, p.estado, p.creado_en, p.items, p.subtotal_cents, p.zona_envio, p.envio_cents, p.total_cents
   from public.pedidos p
   where p.referencia = upper(trim(p_referencia))
     and lower(p.cliente_email) = lower(trim(p_email))

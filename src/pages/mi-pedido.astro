@@ -47,7 +47,17 @@ import Layout from "../layouts/Layout.astro";
 
       <ul id="resultado-items" class="mt-5 space-y-2 border-t border-hamy-pink-light/20 pt-4 text-sm text-hamy-brown"></ul>
 
-      <div class="mt-4 flex items-center justify-between border-t border-hamy-pink-light/20 pt-4 font-bold text-hamy-brown">
+      <p id="resultado-entrega" class="mt-4 border-t border-hamy-pink-light/20 pt-4 text-sm text-hamy-brown-light"></p>
+
+      <div class="mt-2 flex items-center justify-between text-sm text-hamy-brown-light">
+        <span>Subtotal</span>
+        <span id="resultado-subtotal"></span>
+      </div>
+      <div class="mt-1 flex items-center justify-between text-sm text-hamy-brown-light">
+        <span>Envío</span>
+        <span id="resultado-envio"></span>
+      </div>
+      <div class="mt-2 flex items-center justify-between border-t border-hamy-pink-light/20 pt-2 font-bold text-hamy-brown">
         <span>Total</span>
         <span id="resultado-total"></span>
       </div>
@@ -58,6 +68,7 @@ import Layout from "../layouts/Layout.astro";
 <script>
   import { supabase } from "../lib/supabase";
   import { formatPrice } from "../data/products";
+  import { envioLabel } from "../data/shipping";
 
   type PedidoItem = {
     producto_nombre: string;
@@ -70,6 +81,9 @@ import Layout from "../layouts/Layout.astro";
     estado: string;
     creado_en: string;
     items: PedidoItem[];
+    subtotal_cents: number;
+    zona_envio: string;
+    envio_cents: number;
     total_cents: number;
   };
 
@@ -149,6 +163,15 @@ import Layout from "../layouts/Layout.astro";
           itemsList.appendChild(li);
         }
       }
+
+      const entregaEl = document.getElementById("resultado-entrega");
+      if (entregaEl) entregaEl.textContent = `Entrega: ${envioLabel(pedido.zona_envio)}`;
+
+      const subtotalEl = document.getElementById("resultado-subtotal");
+      if (subtotalEl) subtotalEl.textContent = formatPrice(pedido.subtotal_cents);
+
+      const envioEl = document.getElementById("resultado-envio");
+      if (envioEl) envioEl.textContent = pedido.envio_cents === 0 ? "Gratis" : formatPrice(pedido.envio_cents);
 
       const totalEl = document.getElementById("resultado-total");
       if (totalEl) totalEl.textContent = formatPrice(pedido.total_cents);
