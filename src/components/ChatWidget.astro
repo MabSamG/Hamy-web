@@ -5,22 +5,22 @@
   <button
     type="button"
     id="chat-toggle"
-    aria-label="Abrir chat de ayuda"
+    aria-label="Abrir chat con Daniela, la asistente virtual de Hamy"
     aria-expanded="false"
-    class="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-2xl text-white shadow-lg shadow-hamy-coral/40 transition-transform duration-200 hover:scale-105"
+    class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-3xl text-white shadow-xl shadow-hamy-coral/50 ring-4 ring-white transition-transform duration-200 hover:scale-105"
   >
     💬
   </button>
 
   <div
     id="chat-panel"
-    class="fixed bottom-24 right-5 z-40 hidden h-[28rem] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30"
+    class="fixed bottom-28 right-5 z-40 hidden h-[28rem] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30"
     role="dialog"
-    aria-label="Chat de ayuda de Hamy"
+    aria-label="Chat con Daniela, la asistente virtual de Hamy"
   >
     <div class="flex items-center justify-between bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange px-4 py-3 text-white">
       <div>
-        <p class="font-heading text-base font-bold leading-tight">Hamy · Asistente</p>
+        <p class="font-heading text-base font-bold leading-tight">Daniela · Asistente virtual de Hamy</p>
         <p class="text-xs text-white/80">Respuestas automáticas</p>
       </div>
       <button type="button" id="chat-close" aria-label="Cerrar chat" class="text-xl leading-none">✕</button>
@@ -67,7 +67,7 @@
     if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  function agregarBurbuja(texto: string, autor: "bot" | "usuario", enlace?: ChatRespuesta["enlace"]): HTMLDivElement {
+  function agregarBurbuja(texto: string, autor: "bot" | "usuario", enlaces?: ChatRespuesta["enlaces"]): HTMLDivElement {
     const fila = document.createElement("div");
     fila.className = `flex ${autor === "usuario" ? "justify-end" : "justify-start"}`;
 
@@ -81,11 +81,11 @@
     p.textContent = texto;
     burbuja.appendChild(p);
 
-    if (enlace) {
+    for (const enlace of enlaces ?? []) {
       const a = document.createElement("a");
       a.href = enlace.href;
       a.textContent = enlace.label;
-      a.className = "mt-2 inline-block text-xs font-bold text-hamy-coral underline underline-offset-2";
+      a.className = "mt-2 block text-xs font-bold text-hamy-coral underline underline-offset-2";
       burbuja.appendChild(a);
     }
 
@@ -222,10 +222,10 @@
     input.value = "";
 
     const { respuesta, reconocido } = responderMensaje(texto);
-    agregarBurbuja(respuesta.texto, "bot", respuesta.enlace);
+    agregarBurbuja(respuesta.texto, "bot", respuesta.enlaces);
     respuestasDadas++;
 
-    if (!leadPedido && (!reconocido || respuestasDadas >= 2)) {
+    if (!leadPedido && !respuesta.esDespedida && (!reconocido || respuestasDadas >= 2)) {
       setTimeout(mostrarCapturaDeContacto, 400);
     }
   });
