@@ -1,16 +1,26 @@
 ---
 ---
 
-<div class="fixed bottom-5 right-5 z-40 font-heading">
-  <button
-    type="button"
-    id="chat-toggle"
-    aria-label="Abrir chat con Daniela, la asistente virtual de Hamy"
-    aria-expanded="false"
-    class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-3xl text-white shadow-xl shadow-hamy-coral/50 ring-4 ring-white transition-transform duration-200 hover:scale-105"
+<div class="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 font-heading">
+  <div
+    id="chat-tooltip"
+    class="hidden max-w-[12rem] cursor-pointer rounded-2xl rounded-br-md bg-white px-4 py-2 text-sm font-semibold text-hamy-brown shadow-lg ring-1 ring-hamy-pink-light/30"
   >
-    💬
-  </button>
+    ¿Necesitas ayuda? 💬
+  </div>
+
+  <div class="relative animate-chat-bounce">
+    <span class="absolute inset-0 -z-10 rounded-full bg-hamy-coral opacity-60 animate-ping"></span>
+    <button
+      type="button"
+      id="chat-toggle"
+      aria-label="Abrir chat con Daniela, la asistente virtual de Hamy"
+      aria-expanded="false"
+      class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-3xl text-white shadow-xl shadow-hamy-coral/50 ring-4 ring-white transition-transform duration-200 hover:scale-105"
+    >
+      💬
+    </button>
+  </div>
 
   <div
     id="chat-panel"
@@ -57,11 +67,30 @@
   const messagesEl = document.getElementById("chat-messages");
   const form = document.getElementById("chat-form") as HTMLFormElement | null;
   const input = document.getElementById("chat-input") as HTMLInputElement | null;
+  const tooltip = document.getElementById("chat-tooltip");
 
   let abiertoAlgunaVez = false;
   let respuestasDadas = 0;
   let leadPedido = false;
   let ultimoMensajeUsuario = "";
+  let tooltipOcultoTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function ocultarTooltip() {
+    tooltip?.classList.add("hidden");
+    if (tooltipOcultoTimer) clearTimeout(tooltipOcultoTimer);
+  }
+
+  function mostrarTooltip() {
+    if (abiertoAlgunaVez || !tooltip) return;
+    tooltip.classList.remove("hidden");
+    tooltipOcultoTimer = setTimeout(ocultarTooltip, 6000);
+  }
+
+  setTimeout(mostrarTooltip, 3500);
+  tooltip?.addEventListener("click", () => {
+    ocultarTooltip();
+    abrirChat();
+  });
 
   function scrollAbajo() {
     if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -190,6 +219,7 @@
   }
 
   function abrirChat() {
+    ocultarTooltip();
     panel?.classList.remove("hidden");
     panel?.classList.add("flex");
     toggleBtn?.setAttribute("aria-expanded", "true");

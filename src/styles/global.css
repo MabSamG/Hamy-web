@@ -41,4 +41,29 @@
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-hamy-coral px-6 py-3 font-semibold text-hamy-coral transition-colors duration-200 hover:bg-hamy-coral hover:text-white;
   }
+
+  /* Rebote periódico del botón del chat flotante: quieto la mayor parte del ciclo, con un pequeño doble rebote cada pocos segundos. */
+  .animate-chat-bounce {
+    animation: chat-bounce 4s ease-in-out infinite;
+  }
+}
+
+@keyframes chat-bounce {
+  0%,
+  78%,
+  100% {
+    transform: translateY(0);
+  }
+  84% {
+    transform: translateY(-10px);
+  }
+  89% {
+    transform: translateY(0);
+  }
+  93% {
+    transform: translateY(-5px);
+  }
+  97% {
+    transform: translateY(0);
+  }
 }
