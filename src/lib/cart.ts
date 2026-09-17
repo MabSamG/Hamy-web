@@ -35,6 +35,7 @@ export type CartItem = {
   productSlug: string;
   productName: string;
   priceCents: number;
+  weightGrams: number;
   emoji: string;
   addedAt: number;
   personalization: CartItemPersonalization;

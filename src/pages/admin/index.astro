@@ -194,6 +194,17 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
               />
             </label>
             <label class="block text-xs font-semibold text-hamy-brown">
+              Peso (g) — para calcular el envío *
+              <input
+                id="np-peso"
+                type="number"
+                min="0"
+                step="1"
+                required
+                class="mt-1 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-2 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              />
+            </label>
+            <label class="block text-xs font-semibold text-hamy-brown">
               Emoji
               <input
                 id="np-emoji"
@@ -319,7 +330,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     type ConsultaEvento,
     type MensajeContacto,
   } from "../../lib/admin";
-  import { envioLabel } from "../../data/shipping";
+  import { zonaLabel } from "../../data/shipping";
   import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
   const loginSection = document.getElementById("admin-login");
@@ -393,7 +404,10 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     contactP.textContent = [pedido.cliente_telefono, direccionTexto].filter(Boolean).join(" · ") || "Sin datos adicionales";
     const entregaP = document.createElement("p");
     entregaP.className = "text-xs font-semibold text-hamy-brown-light";
-    entregaP.textContent = `Entrega: ${envioLabel(pedido.zona_envio)}`;
+    entregaP.textContent =
+      pedido.zona_envio === "recogida"
+        ? `Entrega: ${zonaLabel(pedido.zona_envio)}`
+        : `Entrega: ${zonaLabel(pedido.zona_envio)} · ${pedido.peso_total_gramos} g`;
     meta.append(dateP, clientP, contactP, entregaP);
 
     const controls = document.createElement("div");
@@ -769,6 +783,12 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     stockInput.placeholder = "Bajo pedido";
     stockInput.value = producto.stock === null ? "" : String(producto.stock);
     stockInput.className = nombreInput.className;
+    const pesoInput = document.createElement("input");
+    pesoInput.type = "number";
+    pesoInput.min = "0";
+    pesoInput.step = "1";
+    pesoInput.value = String(producto.peso_gramos ?? 0);
+    pesoInput.className = nombreInput.className;
     const emojiInput = textInput(producto.emoji ?? "");
     const descCortaInput = textInput(producto.descripcion_corta);
     const descripcionTextarea = document.createElement("textarea");
@@ -789,6 +809,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       fieldWrap("Categorías (separadas por coma)", categoriasInput),
       fieldWrap("Precio (€)", precioInput),
       fieldWrap("Stock (vacío = bajo pedido)", stockInput),
+      fieldWrap("Peso (g) — para calcular el envío", pesoInput),
       fieldWrap("Emoji", emojiInput),
       fieldWrap("Descripción corta", descCortaInput, true),
       fieldWrap("Descripción completa", descripcionTextarea, true),
@@ -823,6 +844,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
           categorias: categorias.length ? categorias : [categoriaPrincipal],
           precio_base: Math.round(parseFloat(precioInput.value || "0") * 100),
           stock: stockInput.value === "" ? null : Number(stockInput.value),
+          peso_gramos: Math.round(Number(pesoInput.value || "0")),
           emoji: emojiInput.value.trim() || null,
           descripcion_corta: descCortaInput.value.trim(),
           descripcion: descripcionTextarea.value.trim(),
@@ -1150,6 +1172,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     const categoriasRaw = (document.getElementById("np-categorias") as HTMLInputElement).value;
     const precio = (document.getElementById("np-precio") as HTMLInputElement).value;
     const stock = (document.getElementById("np-stock") as HTMLInputElement).value;
+    const peso = (document.getElementById("np-peso") as HTMLInputElement).value;
     const emoji = (document.getElementById("np-emoji") as HTMLInputElement).value.trim();
     const plantillaId = (document.getElementById("np-plantilla") as HTMLSelectElement).value;
     const descCorta = (document.getElementById("np-desc-corta") as HTMLInputElement).value.trim();
@@ -1164,7 +1187,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       return;
     }
 
-    if (!nombre || !slug || !categoria || !precio || !descCorta || !descripcion) {
+    if (!nombre || !slug || !categoria || !precio || !peso || !descCorta || !descripcion) {
       if (nuevoProductoError) {
         nuevoProductoError.textContent = "Completa los campos obligatorios (*).";
         nuevoProductoError.classList.remove("hidden");
@@ -1202,6 +1225,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         categorias: categorias.length ? categorias : [categoria],
         precio_base: Math.round(parseFloat(precio || "0") * 100),
         stock: stock === "" ? null : Number(stock),
+        peso_gramos: Math.round(Number(peso || "0")),
         emoji: emoji || null,
         descripcion_corta: descCorta,
         descripcion,

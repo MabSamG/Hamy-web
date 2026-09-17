@@ -34,6 +34,7 @@ export type Pedido = {
   items: PedidoItem[];
   subtotal_cents: number;
   zona_envio: string;
+  peso_total_gramos: number;
   envio_cents: number;
   total_cents: number;
   notas: string | null;
@@ -70,10 +71,11 @@ export type ProductoAdmin = {
   imagen_principal: string | null;
   stock: number | null;
   destacado: boolean;
+  peso_gramos: number;
 };
 
 const PRODUCTO_ADMIN_COLUMNS =
-  "id, slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, imagen_principal, stock, destacado";
+  "id, slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, imagen_principal, stock, destacado, peso_gramos";
 
 export async function listProductosAdmin(): Promise<ProductoAdmin[]> {
   const { data, error } = await supabase
@@ -118,6 +120,7 @@ export type NuevoProducto = {
   stock: number | null;
   destacado: boolean;
   personalizacion: PersonalizationGroup[];
+  peso_gramos: number;
 };
 
 export async function createProducto(producto: NuevoProducto): Promise<void> {

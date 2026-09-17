@@ -75,11 +75,16 @@ create table if not exists public.productos (
   -- la fila del producto, no en codigo, para que el panel /admin pueda crear
   -- productos nuevos eligiendo una plantilla sin necesitar un despliegue.
   personalizacion jsonb not null default '[]'::jsonb,
+  -- Peso de la pieza en gramos, para calcular el envio por tramos de peso
+  -- (ver seccion 3, pedidos). No incluye el embalaje (eso se suma aparte,
+  -- ver PESO_EMBALAJE_GRAMOS en src/data/shipping.ts).
+  peso_gramos integer not null default 0,
   creado_en timestamptz not null default now()
 );
 
 -- Para proyectos donde la tabla ya existia antes de esta columna.
 alter table public.productos add column if not exists personalizacion jsonb not null default '[]'::jsonb;
+alter table public.productos add column if not exists peso_gramos integer not null default 0;
 
 alter table public.productos enable row level security;
 
@@ -126,11 +131,15 @@ create table if not exists public.pedidos (
   --   }
   -- }
   items jsonb not null,
-  -- subtotal_cents = solo productos; envio_cents = coste de envio segun la
-  -- zona elegida; total_cents = subtotal_cents + envio_cents (lo que se
-  -- muestra como total final al cliente y en el admin).
+  -- subtotal_cents = solo productos; envio_cents = coste de envio calculado
+  -- segun peso_total_gramos y la zona elegida (tramos de Paq Ligero de
+  -- Correos, ver src/data/shipping.ts); total_cents = subtotal_cents +
+  -- envio_cents (lo que se muestra como total final al cliente y en el
+  -- admin). peso_total_gramos = suma del peso de cada producto + el
+  -- embalaje fijo, calculado en el carrito en el momento del pedido.
   subtotal_cents integer not null default 0,
   zona_envio text not null default 'peninsula' check (zona_envio in ('peninsula', 'baleares', 'canarias', 'recogida')),
+  peso_total_gramos integer not null default 0,
   envio_cents integer not null default 0,
   total_cents integer not null,
   notas text,
@@ -156,6 +165,11 @@ alter table public.pedidos add column if not exists envio_cents integer;
 update public.pedidos set envio_cents = 0 where envio_cents is null;
 alter table public.pedidos alter column envio_cents set not null;
 alter table public.pedidos alter column envio_cents set default 0;
+
+alter table public.pedidos add column if not exists peso_total_gramos integer;
+update public.pedidos set peso_total_gramos = 0 where peso_total_gramos is null;
+alter table public.pedidos alter column peso_total_gramos set not null;
+alter table public.pedidos alter column peso_total_gramos set default 0;
 
 alter table public.pedidos enable row level security;
 
@@ -219,7 +233,7 @@ create policy "fotos-pedidos: borrado solo admin"
 -- ------------------------------------------------------------
 
 insert into public.productos
-  (slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, destacado, personalizacion)
+  (slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, emoji, destacado, personalizacion, peso_gramos)
 values
   ('llavero-de-bebe', 'Llavero de bebé', 'recuerdos-personalizados',
    array['recuerdos-personalizados', 'llaveros'], 1200,
@@ -241,7 +255,7 @@ values
      {"id":"notas","label":"Notas adicionales","fields":[
        {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
-   ]'::jsonb),
+   ]'::jsonb, 15),
   ('marcapaginas-personalizado', 'Marcapáginas Personalizado', 'puntos-de-libro',
    array['puntos-de-libro'], 800,
    'El punto de libro perfecto con tu nombre o frase favorita.',
@@ -255,7 +269,7 @@ values
      {"id":"notas","label":"Notas adicionales","fields":[
        {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
-   ]'::jsonb),
+   ]'::jsonb, 20),
   ('llavero-de-letra', 'Llavero de letra', 'llaveros',
    array['llaveros'], 350,
    'Tu inicial o un nombre corto, en resina y color a elegir.',
@@ -270,7 +284,7 @@ values
      {"id":"notas","label":"Notas adicionales","fields":[
        {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
-   ]'::jsonb),
+   ]'::jsonb, 10),
   ('corazon-personalizado', 'Corazón personalizado', 'decoracion',
    array['decoracion', 'recuerdos-personalizados'], 2000,
    'Pieza con soporte y dos caras, cada una a tu gusto.',
@@ -286,7 +300,7 @@ values
      {"id":"notas","label":"Notas adicionales","fields":[
        {"id":"nota","label":"Nota adicional","type":"text","required":false,"maxLength":200,"placeholder":"¿Alguna indicación adicional? (opcional)"}
      ]}
-   ]'::jsonb)
+   ]'::jsonb, 60)
 on conflict (slug) do update set
   nombre = excluded.nombre,
   categoria = excluded.categoria,
@@ -296,7 +310,8 @@ on conflict (slug) do update set
   descripcion = excluded.descripcion,
   emoji = excluded.emoji,
   destacado = excluded.destacado,
-  personalizacion = excluded.personalizacion;
+  personalizacion = excluded.personalizacion,
+  peso_gramos = excluded.peso_gramos;
 
 -- ------------------------------------------------------------
 -- 6. ANALYTICS — visitas propias, sin depender de terceros (GA, etc.)
@@ -473,6 +488,7 @@ returns table (
   items jsonb,
   subtotal_cents integer,
   zona_envio text,
+  peso_total_gramos integer,
   envio_cents integer,
   total_cents integer
 )
@@ -480,7 +496,7 @@ language sql
 security definer
 set search_path = public
 as $$
-  select p.referencia, p.estado, p.creado_en, p.items, p.subtotal_cents, p.zona_envio, p.envio_cents, p.total_cents
+  select p.referencia, p.estado, p.creado_en, p.items, p.subtotal_cents, p.zona_envio, p.peso_total_gramos, p.envio_cents, p.total_cents
   from public.pedidos p
   where p.referencia = upper(trim(p_referencia))
     and lower(p.cliente_email) = lower(trim(p_email))

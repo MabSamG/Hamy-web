@@ -19,6 +19,8 @@ export type Product = {
   personalization: PersonalizationGroup[];
   /** Path/URL once real photos are supplied. */
   image?: string;
+  /** Peso de la pieza en gramos, usado para calcular el envío por tramos de peso. */
+  weightGrams: number;
 };
 
 type ProductoRow = {
@@ -33,10 +35,11 @@ type ProductoRow = {
   emoji: string | null;
   imagen_principal: string | null;
   personalizacion: PersonalizationGroup[] | null;
+  peso_gramos: number | null;
 };
 
 const PRODUCTO_COLUMNS =
-  "slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, destacado, emoji, imagen_principal, personalizacion";
+  "slug, nombre, categoria, categorias, precio_base, descripcion_corta, descripcion, destacado, emoji, imagen_principal, personalizacion, peso_gramos";
 
 function mapRow(row: ProductoRow): Product {
   return {
@@ -51,6 +54,7 @@ function mapRow(row: ProductoRow): Product {
     emoji: row.emoji ?? "✨",
     image: row.imagen_principal ?? undefined,
     personalization: row.personalizacion ?? [],
+    weightGrams: row.peso_gramos ?? 0,
   };
 }
 

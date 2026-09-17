@@ -12,6 +12,14 @@ import Layout from "../layouts/Layout.astro";
       <a href="/productos" class="btn-primary mt-6 inline-flex">Ver productos</a>
     </div>
 
+    <div id="cart-load-error" class="mt-10 hidden rounded-3xl bg-red-50 p-6 text-center text-red-600">
+      <p class="font-semibold">No se pudo cargar tu carrito.</p>
+      <p class="mt-1 text-sm">
+        Prueba a recargar la página. Si sigue sin funcionar, es posible que tu navegador tenga bloqueado el
+        almacenamiento local (modo incógnito, o ajustes de privacidad).
+      </p>
+    </div>
+
     <div id="cart-content" class="mt-10 hidden grid gap-8 lg:grid-cols-[1.6fr_1fr]">
       <ul id="cart-items" class="space-y-4"></ul>
 
@@ -24,6 +32,10 @@ import Layout from "../layouts/Layout.astro";
         <div class="mt-2 flex items-center justify-between text-sm text-hamy-brown-light">
           <span>Subtotal</span>
           <span id="cart-subtotal">0,00 €</span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-xs text-hamy-brown-light">
+          <span>Peso del pedido</span>
+          <span id="cart-weight">0 g</span>
         </div>
         <div class="mt-1 flex items-center justify-between text-sm text-hamy-brown-light">
           <span>Envío</span>
@@ -77,6 +89,10 @@ import Layout from "../layouts/Layout.astro";
           <p id="recogida-aviso" class="hidden rounded-xl bg-hamy-cream-dark/60 px-3 py-2 text-xs text-hamy-brown-light">
             Sin dirección de envío — te avisaremos por email o teléfono en cuanto tu pedido esté listo para recoger.
           </p>
+          <p id="envio-excedido-aviso" class="hidden rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+            Tu pedido supera el peso que cubrimos con tarifa automática (2 kg). Contáctanos directamente para
+            consultar el coste de envío de pedidos grandes antes de confirmar.
+          </p>
           <div>
             <label for="cliente-notas" class="block text-sm font-semibold text-hamy-brown">Notas (opcional)</label>
             <textarea
@@ -115,20 +131,23 @@ import Layout from "../layouts/Layout.astro";
   import { getCart, removeFromCart, clearCart, type CartItem } from "../lib/cart";
   import { formatPrice } from "../data/products";
   import { supabase } from "../lib/supabase";
-  import { OPCIONES_ENVIO, getOpcionEnvio, type ZonaEnvio } from "../data/shipping";
+  import { ZONAS_ENVIO, calcularEnvio, PESO_EMBALAJE_GRAMOS, type ZonaEnvio } from "../data/shipping";
 
   const emptyEl = document.getElementById("cart-empty");
+  const loadErrorEl = document.getElementById("cart-load-error");
   const contentEl = document.getElementById("cart-content");
   const successEl = document.getElementById("cart-success");
   const itemsList = document.getElementById("cart-items");
   const countEl = document.getElementById("cart-count");
   const subtotalEl = document.getElementById("cart-subtotal");
+  const weightEl = document.getElementById("cart-weight");
   const shippingEl = document.getElementById("cart-shipping");
   const totalEl = document.getElementById("cart-total");
   const zonaOpcionesEl = document.getElementById("zona-envio-opciones");
   const direccionWrap = document.getElementById("direccion-wrap");
   const direccionInput = document.getElementById("cliente-direccion") as HTMLTextAreaElement | null;
   const recogidaAviso = document.getElementById("recogida-aviso");
+  const excedidoAviso = document.getElementById("envio-excedido-aviso");
   const checkoutForm = document.getElementById("checkout-form") as HTMLFormElement | null;
   const checkoutError = document.getElementById("checkout-error");
   const checkoutSubmit = document.getElementById("checkout-submit") as HTMLButtonElement | null;
@@ -137,13 +156,17 @@ import Layout from "../layouts/Layout.astro";
 
   function getSelectedZona(): ZonaEnvio {
     const checked = zonaOpcionesEl?.querySelector<HTMLInputElement>('input[name="zona-envio"]:checked');
-    return (checked?.value as ZonaEnvio) ?? OPCIONES_ENVIO[0].value;
+    return (checked?.value as ZonaEnvio) ?? ZONAS_ENVIO[0].value;
+  }
+
+  function getPesoTotalGramos(): number {
+    return currentItems.reduce((sum, item) => sum + (item.weightGrams || 0), 0) + PESO_EMBALAJE_GRAMOS;
   }
 
   function renderZonaOpciones() {
     if (!zonaOpcionesEl) return;
     zonaOpcionesEl.innerHTML = "";
-    OPCIONES_ENVIO.forEach((opcion, i) => {
+    ZONAS_ENVIO.forEach((opcion, i) => {
       const label = document.createElement("label");
       label.className =
         "flex cursor-pointer items-center justify-between gap-2 rounded-xl border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown has-[:checked]:border-hamy-coral has-[:checked]:bg-white";
@@ -165,11 +188,21 @@ import Layout from "../layouts/Layout.astro";
       left.append(radio, text);
 
       const price = document.createElement("span");
-      price.className = "font-semibold";
-      price.textContent = opcion.priceCents === 0 ? "Gratis" : formatPrice(opcion.priceCents);
+      price.className = "zona-precio font-semibold";
+      price.dataset.zona = opcion.value;
 
       label.append(left, price);
       zonaOpcionesEl.appendChild(label);
+    });
+  }
+
+  function updateZonaPrecios() {
+    if (!zonaOpcionesEl) return;
+    const peso = getPesoTotalGramos();
+    zonaOpcionesEl.querySelectorAll<HTMLElement>(".zona-precio").forEach((el) => {
+      const zona = el.dataset.zona as ZonaEnvio;
+      const calculo = calcularEnvio(zona, peso);
+      el.textContent = !calculo.ok ? "Consultar" : calculo.priceCents === 0 ? "Gratis" : formatPrice(calculo.priceCents);
     });
   }
 
@@ -182,15 +215,32 @@ import Layout from "../layouts/Layout.astro";
 
   function updateTotals() {
     const subtotal = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
-    const envio = getOpcionEnvio(getSelectedZona())?.priceCents ?? 0;
+    const peso = getPesoTotalGramos();
+    const zona = getSelectedZona();
+    const calculo = calcularEnvio(zona, peso);
+
+    updateZonaPrecios();
+    if (weightEl) weightEl.textContent = `${peso} g`;
     if (subtotalEl) subtotalEl.textContent = formatPrice(subtotal);
+
+    const excedido = !calculo.ok;
+    excedidoAviso?.classList.toggle("hidden", !excedido);
+    if (checkoutSubmit) checkoutSubmit.disabled = excedido;
+
+    if (excedido) {
+      if (shippingEl) shippingEl.textContent = "—";
+      if (totalEl) totalEl.textContent = "—";
+      return;
+    }
+
+    const envio = calculo.priceCents;
     if (shippingEl) shippingEl.textContent = envio === 0 ? "Gratis" : formatPrice(envio);
     if (totalEl) totalEl.textContent = formatPrice(subtotal + envio);
   }
 
   function findFirstPhoto(item: CartItem): File | null {
-    for (const group of Object.values(item.personalization)) {
-      for (const field of Object.values(group.fields)) {
+    for (const group of Object.values(item.personalization ?? {})) {
+      for (const field of Object.values(group.fields ?? {})) {
         if (field.value instanceof File) return field.value;
       }
     }
@@ -230,8 +280,8 @@ import Layout from "../layouts/Layout.astro";
 
     const details = document.createElement("ul");
     details.className = "mt-1 space-y-0.5 text-xs text-hamy-brown-light";
-    for (const group of Object.values(item.personalization)) {
-      for (const field of Object.values(group.fields)) {
+    for (const group of Object.values(item.personalization ?? {})) {
+      for (const field of Object.values(group.fields ?? {})) {
         const detailItem = document.createElement("li");
         const value = field.value instanceof File ? field.value.name : field.value || "(sin especificar)";
         detailItem.textContent = `${group.groupLabel} · ${field.label}: ${value}`;
@@ -254,22 +304,43 @@ import Layout from "../layouts/Layout.astro";
   }
 
   async function loadCart() {
-    currentItems = await getCart();
+    try {
+      currentItems = await getCart();
+    } catch (err) {
+      console.error("No se pudo abrir el carrito (IndexedDB):", err);
+      emptyEl?.classList.add("hidden");
+      contentEl?.classList.add("hidden");
+      successEl?.classList.add("hidden");
+      loadErrorEl?.classList.remove("hidden");
+      return;
+    }
 
     if (currentItems.length === 0) {
       emptyEl?.classList.remove("hidden");
+      loadErrorEl?.classList.add("hidden");
       contentEl?.classList.add("hidden");
       successEl?.classList.add("hidden");
       return;
     }
 
     emptyEl?.classList.add("hidden");
+    loadErrorEl?.classList.add("hidden");
     successEl?.classList.add("hidden");
     contentEl?.classList.remove("hidden");
 
     if (itemsList) {
       itemsList.innerHTML = "";
-      currentItems.forEach((item) => itemsList.appendChild(renderItem(item)));
+      currentItems.forEach((item) => {
+        try {
+          itemsList.appendChild(renderItem(item));
+        } catch (err) {
+          console.error("No se pudo mostrar un artículo del carrito:", item, err);
+          const li = document.createElement("li");
+          li.className = "rounded-2xl bg-red-50 p-4 text-sm text-red-600";
+          li.textContent = "Uno de los artículos del carrito no se pudo mostrar (dato dañado). Quítalo y vuelve a añadirlo.";
+          itemsList.appendChild(li);
+        }
+      });
     }
 
     if (countEl) countEl.textContent = String(currentItems.length);
@@ -297,7 +368,8 @@ import Layout from "../layouts/Layout.astro";
     const direccion = (document.getElementById("cliente-direccion") as HTMLTextAreaElement).value.trim();
     const notas = (document.getElementById("cliente-notas") as HTMLTextAreaElement).value.trim();
     const zona = getSelectedZona();
-    const opcionEnvio = getOpcionEnvio(zona);
+    const pesoTotalGramos = getPesoTotalGramos();
+    const calculo = calcularEnvio(zona, pesoTotalGramos);
 
     if (!nombre || !email || !telefono) {
       showCheckoutError("Completa tu nombre, email y teléfono para confirmar el pedido.");
@@ -309,6 +381,12 @@ import Layout from "../layouts/Layout.astro";
     }
     if (currentItems.length === 0) {
       showCheckoutError("Tu carrito está vacío.");
+      return;
+    }
+    if (!calculo.ok) {
+      showCheckoutError(
+        "Tu pedido supera el peso que cubrimos con tarifa automática (2 kg). Contáctanos directamente para consultar el coste de envío antes de confirmar.",
+      );
       return;
     }
 
@@ -352,7 +430,7 @@ import Layout from "../layouts/Layout.astro";
       }
 
       const subtotalCents = currentItems.reduce((sum, item) => sum + item.priceCents, 0);
-      const envioCents = opcionEnvio?.priceCents ?? 0;
+      const envioCents = calculo.priceCents;
       const totalCents = subtotalCents + envioCents;
 
       const { error: insertError } = await supabase.from("pedidos").insert({
@@ -365,6 +443,7 @@ import Layout from "../layouts/Layout.astro";
         items,
         subtotal_cents: subtotalCents,
         zona_envio: zona,
+        peso_total_gramos: pesoTotalGramos,
         envio_cents: envioCents,
         total_cents: totalCents,
         notas: notas || null,
