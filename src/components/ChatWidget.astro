@@ -10,13 +10,13 @@
   </div>
 
   <div class="relative animate-chat-bounce">
-    <span class="absolute inset-0 -z-10 rounded-full bg-hamy-coral opacity-60 animate-ping"></span>
+    <span class="absolute inset-0 -z-10 rounded-full bg-hamy-coral opacity-70 animate-ping"></span>
     <button
       type="button"
       id="chat-toggle"
       aria-label="Abrir chat con Daniela, la asistente virtual de Hamy"
       aria-expanded="false"
-      class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-3xl text-white shadow-xl shadow-hamy-coral/50 ring-4 ring-white transition-transform duration-200 hover:scale-105"
+      class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-hamy-pink via-hamy-coral to-hamy-orange text-3xl text-white shadow-2xl shadow-black/40 ring-[5px] ring-white transition-transform duration-200 hover:scale-105"
     >
       💬
     </button>
@@ -24,7 +24,7 @@
 
   <div
     id="chat-panel"
-    class="fixed bottom-28 right-5 z-40 hidden h-[28rem] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30"
+    class="fixed bottom-28 right-5 z-40 hidden h-[28rem] max-h-[calc(100vh-8rem)] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30"
     role="dialog"
     aria-label="Chat con Daniela, la asistente virtual de Hamy"
   >
@@ -126,16 +126,22 @@
     return burbuja;
   }
 
-  function mostrarCapturaDeContacto() {
+  function mostrarCapturaDeContacto(conIntro: boolean = true) {
     const fila = document.createElement("div");
     fila.className = "flex justify-start";
 
     const burbuja = document.createElement("div");
     burbuja.className = "max-w-[90%] break-words rounded-2xl rounded-bl-sm bg-white px-3 py-3 text-hamy-brown ring-1 ring-hamy-pink-light/20";
 
-    const intro = document.createElement("p");
-    intro.textContent = "¡Genial! Si quieres, dime tu nombre y cómo contactarte y le echamos un ojo enseguida 😊";
-    burbuja.appendChild(intro);
+    // Cuando viene justo detras de la respuesta de despedida, esta ya invita a
+    // dejar nombre/contacto — repetirlo en una intro aqui queda como dos
+    // mensajes seguidos pidiendo lo mismo, asi que se omite y se va directo al
+    // formulario, como continuacion natural de esa misma respuesta.
+    if (conIntro) {
+      const intro = document.createElement("p");
+      intro.textContent = "¡Genial! Si quieres, dime tu nombre y cómo contactarte y le echamos un ojo enseguida 😊";
+      burbuja.appendChild(intro);
+    }
 
     const miniForm = document.createElement("form");
     miniForm.className = "mt-3 space-y-2";
@@ -255,11 +261,11 @@
     agregarBurbuja(respuesta.texto, "bot", respuesta.enlaces);
 
     // Solo pedimos el contacto cuando hay una intención real de reservar/comprar/encargar,
-    // o al despedirse (para dejar la puerta abierta a que sigan por WhatsApp/contacto/aquí
-    // mismo) — no en cualquier pregunta informativa, por muchas que hagan.
-    if (!leadPedido && (intencionDeCompra || respuesta.esDespedida)) {
+    // o cuando la propia respuesta ya invita a dejar los datos (despedida, hablar con
+    // una persona...) — no en cualquier pregunta informativa, por muchas que hagan.
+    if (!leadPedido && (intencionDeCompra || respuesta.invitaDejarContacto)) {
       leadPedido = true;
-      setTimeout(mostrarCapturaDeContacto, 400);
+      setTimeout(() => mostrarCapturaDeContacto(!respuesta.invitaDejarContacto), 400);
     }
   });
 </script>
