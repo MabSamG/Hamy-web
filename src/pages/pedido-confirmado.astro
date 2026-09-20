@@ -34,4 +34,16 @@ import Layout from "../layouts/Layout.astro";
   // Landing here means Stripe confirmed the payment, so the cart is safe to
   // clear now.
   clearCart().catch(() => {});
+
+  // The webhook normally marks the pedido as pagado, but landing on this
+  // page already proves Stripe confirmed the payment — so double-check here
+  // too, in case the webhook is delayed or misconfigured, instead of leaving
+  // the pedido stuck as "pendiente" in /admin.
+  if (referencia) {
+    fetch("/api/confirmar-pago", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ referencia }),
+    }).catch(() => {});
+  }
 </script>

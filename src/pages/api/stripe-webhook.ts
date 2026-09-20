@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import type Stripe from "stripe";
 import { getStripe } from "../../lib/stripe";
 import { getSupabaseAdmin } from "../../lib/supabaseAdmin";
+import { marcarPedidoComoPagado } from "../../lib/pagos";
 
 // Stripe calls this route directly (not the browser), so it needs the raw
 // request body untouched to verify the signature — this route must stay
@@ -33,35 +34,12 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (pedidoId) {
       const supabaseAdmin = getSupabaseAdmin();
-      const { data: pedido, error: updateError } = await supabaseAdmin
-        .from("pedidos")
-        .update({
-          pago_estado: "pagado",
-          stripe_payment_intent_id:
-            typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? null),
-        })
-        .eq("id", pedidoId)
-        .select("id, referencia, cliente_nombre, cliente_email, total_cents, items")
-        .maybeSingle();
-
-      if (updateError) {
-        console.error("No se pudo marcar el pedido como pagado:", updateError);
-      } else if (pedido) {
-        // Only now — payment confirmed — do we alert the admin by email,
-        // so abandoned/cancelled checkouts stay silent.
-        fetch(`${new URL(request.url).origin}/api/notify`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "pedido",
-            pedidoId: pedido.id,
-            clienteNombre: pedido.cliente_nombre,
-            clienteEmail: pedido.cliente_email,
-            totalCents: pedido.total_cents,
-            itemCount: Array.isArray(pedido.items) ? pedido.items.length : 0,
-          }),
-        }).catch(() => {});
-      }
+      await marcarPedidoComoPagado(
+        supabaseAdmin,
+        pedidoId,
+        typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? null),
+        new URL(request.url).origin
+      );
     }
   }
 
