@@ -5,10 +5,13 @@ import Layout from "../../layouts/Layout.astro";
 <Layout title="Política de privacidad" description="Política de privacidad de Hamy.">
   <section class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
     <h1 class="font-heading text-4xl font-bold text-hamy-brown">Política de privacidad</h1>
-    <p class="mt-4 rounded-2xl bg-hamy-cream-dark px-5 py-4 text-sm text-hamy-brown-light">
-      ⚠️ Texto orientativo. Debe revisarse y completarse conforme al RGPD y la LOPDGDD antes de
-      publicar la tienda, incluyendo los datos reales del responsable del tratamiento.
-    </p>
+    {import.meta.env.DEV && (
+      <p class="mt-4 rounded-2xl bg-hamy-cream-dark px-5 py-4 text-sm text-hamy-brown-light">
+        ⚠️ [Solo visible en local] Texto orientativo. Debe revisarse y completarse conforme al RGPD
+        y la LOPDGDD antes de publicar la tienda, incluyendo los datos reales del responsable del
+        tratamiento.
+      </p>
+    )}
     <div class="prose prose-sm mt-6 max-w-none space-y-4 text-hamy-brown-light">
       <p>
         En Hamy tratamos los datos personales que nos facilitas (nombre, email, dirección de envío,

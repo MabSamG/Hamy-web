@@ -5,10 +5,13 @@ import Layout from "../../layouts/Layout.astro";
 <Layout title="Términos y condiciones" description="Términos y condiciones de compra de Hamy.">
   <section class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
     <h1 class="font-heading text-4xl font-bold text-hamy-brown">Términos y condiciones</h1>
-    <p class="mt-4 rounded-2xl bg-hamy-cream-dark px-5 py-4 text-sm text-hamy-brown-light">
-      ⚠️ Texto orientativo. Debe revisarse legalmente (plazos de envío reales, política de
-      devoluciones y derecho de desistimiento en productos personalizados) antes de publicar la tienda.
-    </p>
+    {import.meta.env.DEV && (
+      <p class="mt-4 rounded-2xl bg-hamy-cream-dark px-5 py-4 text-sm text-hamy-brown-light">
+        ⚠️ [Solo visible en local] Texto orientativo. Debe revisarse legalmente (plazos de envío
+        reales, política de devoluciones y derecho de desistimiento en productos personalizados)
+        antes de publicar la tienda.
+      </p>
+    )}
     <div class="prose prose-sm mt-6 max-w-none space-y-4 text-hamy-brown-light">
       <p>
         Al realizar un pedido en Hamy aceptas estos términos y condiciones. <strong>Todos los productos de
