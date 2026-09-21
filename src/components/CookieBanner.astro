@@ -28,6 +28,30 @@
   const acceptBtn = document.getElementById("cookie-accept");
   const rejectBtn = document.getElementById("cookie-reject");
 
+  // Mientras el aviso está visible, publica su altura como variable CSS para que
+  // la burbuja del chat (ChatWidget.astro) se desplace por encima y no quede
+  // tapada por el aviso — sobre todo en móvil, donde el texto ocupa varias
+  // líneas y el aviso es bastante más alto que en escritorio.
+  let resizeObserver: ResizeObserver | undefined;
+
+  function ajustarOffsetChat() {
+    if (!banner) return;
+    const alto = banner.getBoundingClientRect().height;
+    document.documentElement.style.setProperty("--chat-offset", `${alto + 16}px`);
+  }
+
+  function activarAjusteOffsetChat() {
+    if (!banner) return;
+    ajustarOffsetChat();
+    resizeObserver = new ResizeObserver(ajustarOffsetChat);
+    resizeObserver.observe(banner);
+  }
+
+  function desactivarAjusteOffsetChat() {
+    resizeObserver?.disconnect();
+    document.documentElement.style.removeProperty("--chat-offset");
+  }
+
   function hasChoice(): boolean {
     try {
       return localStorage.getItem(STORAGE_KEY) !== null;
@@ -45,10 +69,12 @@
       // Ver comentario en hasChoice — sin storage no hay nada que persistir.
     }
     banner?.classList.add("hidden");
+    desactivarAjusteOffsetChat();
   }
 
   if (!hasChoice()) {
     banner?.classList.remove("hidden");
+    activarAjusteOffsetChat();
   }
 
   acceptBtn?.addEventListener("click", () => saveChoice("all"));

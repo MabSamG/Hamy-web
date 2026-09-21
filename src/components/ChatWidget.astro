@@ -1,7 +1,7 @@
 ---
 ---
 
-<div class="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-3 font-heading">
+<div class="fixed bottom-[var(--chat-offset,1.25rem)] right-5 z-40 flex flex-col items-end gap-3 font-heading transition-[bottom] duration-200">
   <div
     id="chat-tooltip"
     class="hidden max-w-[12rem] cursor-pointer rounded-2xl rounded-br-md bg-white px-4 py-2 text-sm font-semibold text-hamy-brown shadow-lg ring-1 ring-hamy-pink-light/30"
@@ -24,7 +24,7 @@
 
   <div
     id="chat-panel"
-    class="fixed bottom-28 right-5 z-40 hidden h-[28rem] max-h-[calc(100vh-8rem)] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30"
+    class="fixed bottom-[calc(var(--chat-offset,1.25rem)_+_5.75rem)] right-5 z-40 hidden h-[28rem] max-h-[calc(100vh-8rem)] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-hamy-pink-light/30 transition-[bottom] duration-200"
     role="dialog"
     aria-label="Chat con Daniela, la asistente virtual de Hamy"
   >
@@ -70,6 +70,7 @@
 
   let abiertoAlgunaVez = false;
   let leadPedido = false;
+  let leadEnviado = false;
   let ultimoMensajeUsuario = "";
   let tooltipOcultoTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -208,6 +209,7 @@
           .insert({ nombre, contacto, contexto: ultimoMensajeUsuario || null });
         if (error) throw new Error(error.message);
 
+        leadEnviado = true;
         miniForm.remove();
         const gracias = document.createElement("p");
         gracias.className = "mt-2 text-sm font-semibold text-hamy-brown";
@@ -263,7 +265,12 @@
     // Solo pedimos el contacto cuando hay una intención real de reservar/comprar/encargar,
     // o cuando la propia respuesta ya invita a dejar los datos (despedida, hablar con
     // una persona...) — no en cualquier pregunta informativa, por muchas que hagan.
-    if (!leadPedido && (intencionDeCompra || respuesta.invitaDejarContacto)) {
+    // Una vez enviado el formulario ya no se vuelve a pedir. Pero una petición EXPLÍCITA
+    // de contacto (despedida, "quiero hablar con alguien"...) siempre debe mostrar el
+    // formulario aunque ya se hubiera ofrecido antes por intención de compra y se
+    // hubiera descartado con "Ahora no" — si no, se queda solo el texto sin el hueco
+    // para dejar nombre y mail, que es justo lo que se pide aquí.
+    if (!leadEnviado && (respuesta.invitaDejarContacto || (!leadPedido && intencionDeCompra))) {
       leadPedido = true;
       setTimeout(() => mostrarCapturaDeContacto(!respuesta.invitaDejarContacto), 400);
     }

@@ -42,6 +42,32 @@ type Regla = {
   respuesta: ChatRespuesta;
 };
 
+// Declarada aparte (no solo dentro de REGLAS) porque tambien la usa
+// esPreguntaTiendaFisica mas abajo, para eximir estas frases del interceptor
+// generico de "teneis" (que si no, responderia "ese producto no lo
+// trabajamos" a "¿tenéis tienda?" antes de llegar siquiera a esta regla).
+const PALABRAS_TIENDA_FISICA = [
+  "tienda fisica",
+  "teneis tienda",
+  "teneis local",
+  "punto de venta",
+  "showroom",
+  "ver el producto",
+  "verlo fisicamente",
+  "ver en persona",
+  "verlo en persona",
+  "ver en fisica",
+  "veros en persona",
+  "visitaros",
+  "ir a veros",
+  "puedo pasarme",
+  "donde estais ubicadas",
+  "donde estan ubicadas",
+  "donde estan ubicados",
+  "donde os encontramos",
+  "teneis local fisico",
+];
+
 const REGLAS: Regla[] = [
   // --- Envio fuera de España, frases genericas sin nombrar pais/ciudad
   // concretos: va antes que la regla general de envio para que "internacional"
@@ -110,6 +136,41 @@ const REGLAS: Regla[] = [
       texto:
         "Como cada pieza se hace especialmente para ti, no podemos aceptar devoluciones salvo que tenga algún defecto de fabricación. Lo tienes explicado con más detalle aquí:",
       enlaces: [{ href: "/legal/terminos", label: "Ver términos y condiciones" }],
+    },
+  },
+
+  // --- Cancelar/modificar un pedido ya confirmado: misma base que devoluciones
+  // (piezas personalizadas hechas a mano bajo pedido), pero como texto de
+  // pregunta es distinto ("¿puedo cancelar?" vs "quiero devolver algo que ya
+  // tengo"), se responde aparte en vez de forzar la respuesta de devoluciones ---
+  {
+    palabrasClave: [
+      "cancelar pedido",
+      "cancelar mi pedido",
+      "puedo cancelar",
+      "quiero cancelar",
+      "anular pedido",
+      "anular mi pedido",
+      "modificar pedido",
+      "modificar mi pedido",
+      "puedo modificar",
+      "quiero modificar",
+      "cambiar mi pedido",
+      "cambiar de idea",
+    ],
+    respuesta: {
+      texto:
+        "Como cada pieza se hace a mano y a medida en cuanto confirmamos el pedido, no podemos cancelarlo ni modificarlo una vez confirmado el pago. Si acabas de pedir y necesitas cambiar algo, escríbenos cuanto antes y miramos si aún estamos a tiempo 🙏",
+      enlaces: [{ href: "/legal/terminos", label: "Ver términos y condiciones" }],
+    },
+  },
+
+  // --- Tienda física / punto de venta presencial ---
+  {
+    palabrasClave: PALABRAS_TIENDA_FISICA,
+    respuesta: {
+      texto:
+        "No tenemos tienda física abierta al público — trabajamos 100% online y cada pieza se hace bajo pedido. Eso sí, si estás en Elche puedes recoger tu pedido en persona sin coste de envío 😊",
     },
   },
 
@@ -362,7 +423,20 @@ const REGLAS: Regla[] = [
 
   // --- Cómo hacer un pedido normal ---
   {
-    palabrasClave: ["como pido", "como compro", "como hago un pedido", "quiero comprar", "hacer un pedido", "catalogo", "ver productos", "donde compro"],
+    palabrasClave: [
+      "como pido",
+      "como compro",
+      "como hago un pedido",
+      "quiero comprar",
+      "hacer un pedido",
+      "catalogo",
+      "ver productos",
+      "ver los productos",
+      "puedo verlos",
+      "puedo verlo",
+      "ver el catalogo",
+      "donde compro",
+    ],
     respuesta: {
       texto: "Es superfácil: entras al catálogo, eliges tu producto y lo personalizas a tu gusto antes de comprarlo.",
       enlaces: [{ href: "/productos", label: "Ver productos" }],
@@ -559,6 +633,10 @@ const RESPUESTA_PRODUCTO_NO_DISPONIBLE: ChatRespuesta = {
   texto: "De momento ese producto no lo trabajamos, lo siento.",
 };
 
+function esPreguntaTiendaFisica(normalizado: string): boolean {
+  return PALABRAS_TIENDA_FISICA.some((palabra) => contienePalabraClave(normalizado, palabra));
+}
+
 // Envio a un pais/ciudad concreto de fuera de España (p. ej. "enviais a
 // Francia", "haceis envios a Lisboa"): en vez de enumerar cada combinacion
 // verbo+pais como palabra clave literal, se detecta por combinacion — un
@@ -636,7 +714,7 @@ export function responderMensaje(mensaje: string): { respuesta: ChatRespuesta; r
     return { respuesta: RESPUESTA_ENVIO_EXTRANJERO, reconocido: true, intencionDeCompra };
   }
 
-  if (contienePalabraClave(normalizado, "teneis") && !esPreguntaGenericaSinProducto(normalizado)) {
+  if (contienePalabraClave(normalizado, "teneis") && !esPreguntaGenericaSinProducto(normalizado) && !esPreguntaTiendaFisica(normalizado)) {
     return { respuesta: RESPUESTA_PRODUCTO_NO_DISPONIBLE, reconocido: true, intencionDeCompra };
   }
 
