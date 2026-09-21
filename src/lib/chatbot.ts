@@ -502,7 +502,7 @@ const REGLAS: Regla[] = [
       texto:
         "¡Un placer! Para cualquier cosa que necesites, escríbenos por WhatsApp, usa el formulario de contacto, o déjame aquí tu nombre y contacto y te escribimos nosotros 😊",
       enlaces: [
-        { href: "https://wa.me/34600000000", label: "Escríbenos por WhatsApp" },
+        { href: "https://wa.me/34611871937", label: "Escríbenos por WhatsApp" },
         { href: "/contacto", label: "Ir a contacto" },
       ],
       invitaDejarContacto: true,
