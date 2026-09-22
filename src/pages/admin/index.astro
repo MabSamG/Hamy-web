@@ -919,6 +919,14 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     nombreP.className = "font-heading text-base font-bold text-hamy-brown";
     nombreP.textContent = cliente.nombre;
     nombreWrap.appendChild(nombreP);
+    if (cliente.etiquetas.length > 0) {
+      const etiquetaIcon = document.createElement("span");
+      etiquetaIcon.className =
+        "rounded-full bg-hamy-pink-light/25 px-1.5 py-0.5 text-[11px] font-semibold text-hamy-brown";
+      etiquetaIcon.title = cliente.etiquetas.join(", ");
+      etiquetaIcon.textContent = `🏷️ ${cliente.etiquetas.length}`;
+      nombreWrap.appendChild(etiquetaIcon);
+    }
     if (esClienteInactivo(cliente)) {
       const inactivoBadge = document.createElement("span");
       inactivoBadge.className =
