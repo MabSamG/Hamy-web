@@ -200,6 +200,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
                 <p class="text-xs text-hamy-brown-light">Último pedido</p>
               </div>
             </div>
+            <p id="cliente-detalle-favoritos" class="mt-3 text-sm text-hamy-brown-light"></p>
           </div>
 
           <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
@@ -548,6 +549,27 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     const digitos = telefono.replace(/\D/g, "");
     if (digitos.length === 9) return `34${digitos}`;
     return digitos;
+  }
+
+  /** Producto y categoría que más veces ha comprado este cliente, a partir de su historial de pedidos. */
+  function calcularFavoritosCliente(cliente: Cliente): { producto: string | null; categoria: string | null } {
+    const productoCount = new Map<string, number>();
+    const categoriaCount = new Map<string, number>();
+    for (const pedido of cliente.pedidos) {
+      for (const item of pedido.items) {
+        productoCount.set(item.producto_nombre, (productoCount.get(item.producto_nombre) ?? 0) + item.cantidad);
+        const producto = productosCache.find((p) => p.slug === item.producto_slug);
+        if (producto) {
+          categoriaCount.set(producto.categoria, (categoriaCount.get(producto.categoria) ?? 0) + item.cantidad);
+        }
+      }
+    }
+    const masComprado = (m: Map<string, number>) => [...m.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+    const categoriaSlug = masComprado(categoriaCount);
+    const categoriaNombre = categoriaSlug
+      ? categoriasCache.find((c) => c.slug === categoriaSlug)?.nombre ?? categoriaSlug
+      : null;
+    return { producto: masComprado(productoCount), categoria: categoriaNombre };
   }
 
   const ESTADOS: { value: PedidoEstado; label: string }[] = [
@@ -1029,6 +1051,17 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     if (numPedidosEl) numPedidosEl.textContent = String(cliente.numPedidos);
     if (totalGastadoEl) totalGastadoEl.textContent = formatPriceCents(cliente.totalGastadoCents);
     if (ultimoPedidoEl) ultimoPedidoEl.textContent = formatDate(cliente.ultimoPedidoEn);
+
+    const favoritosEl = document.getElementById("cliente-detalle-favoritos");
+    if (favoritosEl) {
+      const { producto, categoria } = calcularFavoritosCliente(cliente);
+      favoritosEl.textContent =
+        producto || categoria
+          ? [producto ? `Compra más: ${producto}` : null, categoria ? `Categoría favorita: ${categoria}` : null]
+              .filter(Boolean)
+              .join(" · ")
+          : "";
+    }
 
     if (clientePedidosList) {
       clientePedidosList.innerHTML = "";
