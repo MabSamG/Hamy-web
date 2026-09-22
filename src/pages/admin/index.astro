@@ -206,7 +206,17 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
                 <p class="text-xs text-hamy-brown-light">Último pedido</p>
               </div>
             </div>
-            <p id="cliente-detalle-favoritos" class="mt-3 text-sm text-hamy-brown-light"></p>
+          </div>
+
+          <div
+            id="cliente-detalle-favoritos-wrap"
+            class="mt-4 hidden items-start gap-3 rounded-2xl bg-hamy-coral/10 p-4 ring-1 ring-hamy-coral/20"
+          >
+            <span class="text-2xl" aria-hidden="true">⭐</span>
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-wide text-hamy-coral">Lo que más compra</p>
+              <p id="cliente-detalle-favoritos" class="mt-0.5 text-base font-semibold text-hamy-brown"></p>
+            </div>
           </div>
 
           <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
@@ -1134,14 +1144,22 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     if (ultimoPedidoEl) ultimoPedidoEl.textContent = formatDate(cliente.ultimoPedidoEn);
 
     const favoritosEl = document.getElementById("cliente-detalle-favoritos");
-    if (favoritosEl) {
+    const favoritosWrap = document.getElementById("cliente-detalle-favoritos-wrap");
+    if (favoritosEl && favoritosWrap) {
       const { producto, categoria } = calcularFavoritosCliente(cliente);
-      favoritosEl.textContent =
-        producto || categoria
-          ? [producto ? `Compra más: ${producto}` : null, categoria ? `Categoría favorita: ${categoria}` : null]
-              .filter(Boolean)
-              .join(" · ")
-          : "";
+      if (producto || categoria) {
+        favoritosEl.textContent = [
+          producto ? `Compra más: ${producto}` : null,
+          categoria ? `Categoría favorita: ${categoria}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        favoritosWrap.classList.remove("hidden");
+        favoritosWrap.classList.add("flex");
+      } else {
+        favoritosWrap.classList.add("hidden");
+        favoritosWrap.classList.remove("flex");
+      }
     }
 
     if (clientePedidosList) {
