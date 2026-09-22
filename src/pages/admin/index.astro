@@ -827,19 +827,37 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     return li;
   }
 
+  /** Umbral para marcar a un cliente como inactivo en la lista — ajustable aquí si 60 días no encaja. */
+  const DIAS_CLIENTE_INACTIVO = 60;
+
+  function esClienteInactivo(cliente: Cliente): boolean {
+    return Date.now() - new Date(cliente.ultimoPedidoEn).getTime() > DIAS_CLIENTE_INACTIVO * 24 * 60 * 60 * 1000;
+  }
+
   function renderClienteRow(cliente: Cliente): HTMLElement {
     const li = document.createElement("li");
     li.className =
       "flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-hamy-pink-light/20 cursor-pointer hover:ring-hamy-coral/50";
 
     const info = document.createElement("div");
+    const nombreWrap = document.createElement("div");
+    nombreWrap.className = "flex items-center gap-2";
     const nombreP = document.createElement("p");
     nombreP.className = "font-heading text-base font-bold text-hamy-brown";
     nombreP.textContent = cliente.nombre;
+    nombreWrap.appendChild(nombreP);
+    if (esClienteInactivo(cliente)) {
+      const inactivoBadge = document.createElement("span");
+      inactivoBadge.className =
+        "rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700";
+      inactivoBadge.textContent = `⚠️ Inactivo (+${DIAS_CLIENTE_INACTIVO} días)`;
+      nombreWrap.appendChild(inactivoBadge);
+    }
+    info.appendChild(nombreWrap);
     const contactoP = document.createElement("p");
     contactoP.className = "text-xs text-hamy-brown-light";
     contactoP.textContent = [cliente.email, cliente.telefono].filter(Boolean).join(" · ");
-    info.append(nombreP, contactoP);
+    info.appendChild(contactoP);
     if (cliente.etiquetas.length > 0) {
       const etiquetasUl = document.createElement("ul");
       etiquetasUl.className = "mt-1 flex flex-wrap gap-1";
