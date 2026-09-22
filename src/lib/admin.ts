@@ -269,3 +269,103 @@ export async function listAnalyticsRecientes(): Promise<AnalyticsEvento[]> {
   if (error) throw new Error(`No se pudieron cargar las estadísticas: ${error.message}`);
   return (data ?? []) as AnalyticsEvento[];
 }
+
+export type Cliente = {
+  /** Email normalizado (minúsculas) del pedido más reciente — clave para vincular las notas manuales. */
+  clave: string;
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  numPedidos: number;
+  totalGastadoCents: number;
+  ultimoPedidoEn: string;
+  pedidos: Pedido[];
+};
+
+function normalizarEmailCliente(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+function normalizarTelefonoCliente(telefono: string | null): string | null {
+  if (!telefono) return null;
+  const digitos = telefono.replace(/\D/g, "");
+  return digitos.length >= 6 ? digitos : null;
+}
+
+function ufFind(uf: Map<string, string>, x: string): string {
+  let root = x;
+  while (uf.get(root) !== root) root = uf.get(root)!;
+  let cur = x;
+  while (uf.get(cur) !== root) {
+    const next = uf.get(cur)!;
+    uf.set(cur, root);
+    cur = next;
+  }
+  return root;
+}
+
+function ufUnion(uf: Map<string, string>, a: string, b: string): void {
+  if (!uf.has(a)) uf.set(a, a);
+  if (!uf.has(b)) uf.set(b, b);
+  const ra = ufFind(uf, a);
+  const rb = ufFind(uf, b);
+  if (ra !== rb) uf.set(ra, rb);
+}
+
+/**
+ * Agrupa los pedidos existentes por cliente. La clave principal es el email,
+ * pero si dos pedidos con emails distintos comparten el mismo teléfono se
+ * agrupan igual (typo en el email, variante que no coincide, etc.).
+ */
+export async function listClientes(): Promise<Cliente[]> {
+  const pedidos = await listPedidos();
+  const uf = new Map<string, string>();
+
+  for (const pedido of pedidos) {
+    const emailKey = `email:${normalizarEmailCliente(pedido.cliente_email)}`;
+    if (!uf.has(emailKey)) uf.set(emailKey, emailKey);
+    const telNorm = normalizarTelefonoCliente(pedido.cliente_telefono);
+    if (telNorm) ufUnion(uf, emailKey, `tel:${telNorm}`);
+  }
+
+  const grupos = new Map<string, Pedido[]>();
+  for (const pedido of pedidos) {
+    const emailKey = `email:${normalizarEmailCliente(pedido.cliente_email)}`;
+    const root = ufFind(uf, emailKey);
+    const lista = grupos.get(root) ?? [];
+    lista.push(pedido);
+    grupos.set(root, lista);
+  }
+
+  const clientes: Cliente[] = [];
+  for (const pedidosCliente of grupos.values()) {
+    // listPedidos() ya viene ordenado por creado_en descendente.
+    const masReciente = pedidosCliente[0];
+    const telefono = pedidosCliente.find((p) => p.cliente_telefono)?.cliente_telefono ?? null;
+    clientes.push({
+      clave: normalizarEmailCliente(masReciente.cliente_email),
+      nombre: masReciente.cliente_nombre,
+      email: masReciente.cliente_email,
+      telefono,
+      numPedidos: pedidosCliente.length,
+      totalGastadoCents: pedidosCliente.reduce((sum, p) => sum + p.total_cents, 0),
+      ultimoPedidoEn: masReciente.creado_en,
+      pedidos: pedidosCliente,
+    });
+  }
+
+  return clientes;
+}
+
+export async function getNotaCliente(clave: string): Promise<string> {
+  const { data, error } = await supabase.from("notas_clientes").select("notas").eq("email", clave).maybeSingle();
+  if (error) throw new Error(`No se pudo cargar la nota del cliente: ${error.message}`);
+  return data?.notas ?? "";
+}
+
+export async function guardarNotaCliente(clave: string, notas: string): Promise<void> {
+  const { error } = await supabase
+    .from("notas_clientes")
+    .upsert({ email: clave, notas, actualizado_en: new Date().toISOString() });
+  if (error) throw new Error(`No se pudo guardar la nota del cliente: ${error.message}`);
+}

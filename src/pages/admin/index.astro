@@ -46,6 +46,13 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         </button>
         <button
           type="button"
+          data-tab="clientes"
+          class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
+        >
+          Clientes
+        </button>
+        <button
+          type="button"
           data-tab="eventos"
           class="tab-btn border-b-2 border-transparent px-4 py-2 text-sm font-semibold text-hamy-brown-light"
         >
@@ -85,6 +92,74 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         <p id="pedidos-loading" class="text-hamy-brown-light">Cargando pedidos...</p>
         <p id="pedidos-empty" class="hidden text-hamy-brown-light">Todavía no hay pedidos.</p>
         <ul id="pedidos-list" class="space-y-4"></ul>
+      </div>
+
+      <div id="tab-clientes" class="tab-panel mt-6 hidden">
+        <div id="clientes-list-view">
+          <div class="flex flex-wrap items-center gap-3">
+            <input
+              id="clientes-buscar"
+              type="search"
+              placeholder="Buscar por nombre o email..."
+              class="w-full max-w-xs rounded-full border-2 border-hamy-pink-light/40 bg-white px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            />
+            <select
+              id="clientes-orden"
+              class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            >
+              <option value="ultimo_pedido_desc">Último pedido: más reciente primero</option>
+              <option value="ultimo_pedido_asc">Último pedido: más antiguo primero</option>
+              <option value="total_gastado_desc">Total gastado: mayor a menor</option>
+            </select>
+          </div>
+          <p id="clientes-loading" class="mt-4 text-hamy-brown-light">Cargando clientes...</p>
+          <p id="clientes-empty" class="hidden mt-4 text-hamy-brown-light">Todavía no hay clientes.</p>
+          <p id="clientes-sin-resultados" class="hidden mt-4 text-hamy-brown-light">Ningún cliente coincide con la búsqueda.</p>
+          <ul id="clientes-list" class="mt-4 space-y-2"></ul>
+        </div>
+
+        <div id="clientes-detail-view" class="hidden">
+          <button type="button" id="clientes-volver" class="text-sm font-semibold text-hamy-coral hover:underline">
+            ← Volver a clientes
+          </button>
+
+          <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+            <h2 id="cliente-detalle-nombre" class="font-heading text-2xl font-bold text-hamy-brown"></h2>
+            <p id="cliente-detalle-contacto" class="text-sm text-hamy-brown-light"></p>
+            <div class="mt-4 grid grid-cols-3 gap-3 text-center">
+              <div>
+                <p id="cliente-detalle-numpedidos" class="font-heading text-2xl font-bold text-hamy-coral"></p>
+                <p class="text-xs text-hamy-brown-light">Pedidos</p>
+              </div>
+              <div>
+                <p id="cliente-detalle-totalgastado" class="font-heading text-2xl font-bold text-hamy-coral"></p>
+                <p class="text-xs text-hamy-brown-light">Total gastado</p>
+              </div>
+              <div>
+                <p id="cliente-detalle-ultimopedido" class="font-heading text-2xl font-bold text-hamy-coral"></p>
+                <p class="text-xs text-hamy-brown-light">Último pedido</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-hamy-pink-light/20">
+            <h3 class="font-heading text-lg font-bold text-hamy-brown">Notas</h3>
+            <textarea
+              id="cliente-notas"
+              rows="4"
+              placeholder="Observaciones sobre este cliente (ej. cliente habitual, siempre pide llavero de letra)..."
+              class="mt-2 w-full rounded-lg border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            ></textarea>
+            <div class="mt-2 flex items-center gap-3">
+              <button type="button" id="cliente-notas-guardar" class="btn-primary">Guardar notas</button>
+              <span id="cliente-notas-guardado" class="hidden text-sm font-semibold text-green-600">Guardado ✓</span>
+              <span id="cliente-notas-error" class="hidden text-sm font-semibold text-red-500"></span>
+            </div>
+          </div>
+
+          <h3 class="mt-6 font-heading text-lg font-bold text-hamy-brown">Historial de pedidos</h3>
+          <ul id="cliente-pedidos-list" class="mt-3 space-y-4"></ul>
+        </div>
       </div>
 
       <div id="tab-eventos" class="tab-panel mt-6 hidden">
@@ -342,6 +417,9 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     updateMensajeContactoAtendido,
     listLeadsAgente,
     updateLeadAgenteAtendido,
+    listClientes,
+    getNotaCliente,
+    guardarNotaCliente,
     type Pedido,
     type PedidoEstado,
     type PagoEstado,
@@ -351,6 +429,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
     type ConsultaEvento,
     type MensajeContacto,
     type LeadAgente,
+    type Cliente,
   } from "../../lib/admin";
   import { zonaLabel } from "../../data/shipping";
   import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
@@ -371,6 +450,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   const tabButtons = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
   const tabPanels: Record<string, HTMLElement | null> = {
     pedidos: document.getElementById("tab-pedidos"),
+    clientes: document.getElementById("tab-clientes"),
     eventos: document.getElementById("tab-eventos"),
     contacto: document.getElementById("tab-contacto"),
     agente: document.getElementById("tab-agente"),
@@ -390,6 +470,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       });
       Object.entries(tabPanels).forEach(([key, panel]) => panel?.classList.toggle("hidden", key !== tab));
       if (tab === "estadisticas") loadEstadisticas();
+      if (tab === "clientes") loadClientes();
     });
   });
 
@@ -619,6 +700,189 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
       pedidosLoading?.classList.add("hidden");
     }
   }
+
+  let clientesCache: Cliente[] = [];
+  let clienteSeleccionado: Cliente | null = null;
+  let clientesLoaded = false;
+
+  const clientesListView = document.getElementById("clientes-list-view");
+  const clientesDetailView = document.getElementById("clientes-detail-view");
+  const clientesListEl = document.getElementById("clientes-list");
+  const clientesLoading = document.getElementById("clientes-loading");
+  const clientesEmpty = document.getElementById("clientes-empty");
+  const clientesSinResultados = document.getElementById("clientes-sin-resultados");
+  const clientesBuscar = document.getElementById("clientes-buscar") as HTMLInputElement | null;
+  const clientesOrden = document.getElementById("clientes-orden") as HTMLSelectElement | null;
+
+  function renderClienteRow(cliente: Cliente): HTMLElement {
+    const li = document.createElement("li");
+    li.className =
+      "flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-hamy-pink-light/20 cursor-pointer hover:ring-hamy-coral/50";
+
+    const info = document.createElement("div");
+    const nombreP = document.createElement("p");
+    nombreP.className = "font-heading text-base font-bold text-hamy-brown";
+    nombreP.textContent = cliente.nombre;
+    const contactoP = document.createElement("p");
+    contactoP.className = "text-xs text-hamy-brown-light";
+    contactoP.textContent = [cliente.email, cliente.telefono].filter(Boolean).join(" · ");
+    info.append(nombreP, contactoP);
+
+    const stats = document.createElement("div");
+    stats.className = "flex items-center gap-6 text-right";
+
+    const pedidosStat = document.createElement("div");
+    const pedidosValor = document.createElement("p");
+    pedidosValor.className = "font-semibold text-hamy-brown";
+    pedidosValor.textContent = String(cliente.numPedidos);
+    const pedidosLabel = document.createElement("p");
+    pedidosLabel.className = "text-[10px] uppercase tracking-wide text-hamy-brown-light";
+    pedidosLabel.textContent = "Pedidos";
+    pedidosStat.append(pedidosValor, pedidosLabel);
+
+    const gastadoStat = document.createElement("div");
+    const gastadoValor = document.createElement("p");
+    gastadoValor.className = "font-semibold text-hamy-coral";
+    gastadoValor.textContent = formatPriceCents(cliente.totalGastadoCents);
+    const gastadoLabel = document.createElement("p");
+    gastadoLabel.className = "text-[10px] uppercase tracking-wide text-hamy-brown-light";
+    gastadoLabel.textContent = "Total gastado";
+    gastadoStat.append(gastadoValor, gastadoLabel);
+
+    const ultimoStat = document.createElement("div");
+    const ultimoValor = document.createElement("p");
+    ultimoValor.className = "font-semibold text-hamy-brown";
+    ultimoValor.textContent = new Date(cliente.ultimoPedidoEn).toLocaleDateString("es-ES", { dateStyle: "medium" });
+    const ultimoLabel = document.createElement("p");
+    ultimoLabel.className = "text-[10px] uppercase tracking-wide text-hamy-brown-light";
+    ultimoLabel.textContent = "Último pedido";
+    ultimoStat.append(ultimoValor, ultimoLabel);
+
+    stats.append(pedidosStat, gastadoStat, ultimoStat);
+    li.append(info, stats);
+    li.addEventListener("click", () => showClienteDetail(cliente));
+    return li;
+  }
+
+  function ordenarYFiltrarClientes(): Cliente[] {
+    const busqueda = (clientesBuscar?.value ?? "").trim().toLowerCase();
+    let lista = clientesCache;
+    if (busqueda) {
+      lista = lista.filter(
+        (c) => c.nombre.toLowerCase().includes(busqueda) || c.email.toLowerCase().includes(busqueda),
+      );
+    }
+    const orden = clientesOrden?.value ?? "ultimo_pedido_desc";
+    lista = [...lista].sort((a, b) => {
+      if (orden === "total_gastado_desc") return b.totalGastadoCents - a.totalGastadoCents;
+      if (orden === "ultimo_pedido_asc") {
+        return new Date(a.ultimoPedidoEn).getTime() - new Date(b.ultimoPedidoEn).getTime();
+      }
+      return new Date(b.ultimoPedidoEn).getTime() - new Date(a.ultimoPedidoEn).getTime();
+    });
+    return lista;
+  }
+
+  function renderClientesList() {
+    if (!clientesListEl) return;
+    const lista = ordenarYFiltrarClientes();
+    clientesListEl.innerHTML = "";
+    clientesSinResultados?.classList.toggle("hidden", lista.length > 0 || clientesCache.length === 0);
+    lista.forEach((cliente) => clientesListEl.appendChild(renderClienteRow(cliente)));
+  }
+
+  async function loadClientes() {
+    if (clientesLoaded || !clientesListEl) return;
+    clientesLoading?.classList.remove("hidden");
+    clientesEmpty?.classList.add("hidden");
+    try {
+      clientesCache = await listClientes();
+      clientesLoaded = true;
+      clientesEmpty?.classList.toggle("hidden", clientesCache.length > 0);
+      renderClientesList();
+    } catch (err) {
+      clientesListEl.innerHTML = "";
+      const errorP = document.createElement("p");
+      errorP.className = "text-sm font-semibold text-red-500";
+      errorP.textContent = err instanceof Error ? err.message : "No se pudieron cargar los clientes.";
+      clientesListEl.appendChild(errorP);
+    } finally {
+      clientesLoading?.classList.add("hidden");
+    }
+  }
+
+  clientesBuscar?.addEventListener("input", renderClientesList);
+  clientesOrden?.addEventListener("change", renderClientesList);
+
+  const clientesVolverBtn = document.getElementById("clientes-volver");
+  const clienteNotasTextarea = document.getElementById("cliente-notas") as HTMLTextAreaElement | null;
+  const clienteNotasGuardarBtn = document.getElementById("cliente-notas-guardar") as HTMLButtonElement | null;
+  const clienteNotasGuardado = document.getElementById("cliente-notas-guardado");
+  const clienteNotasError = document.getElementById("cliente-notas-error");
+  const clientePedidosList = document.getElementById("cliente-pedidos-list");
+
+  async function showClienteDetail(cliente: Cliente) {
+    clienteSeleccionado = cliente;
+    clientesListView?.classList.add("hidden");
+    clientesDetailView?.classList.remove("hidden");
+
+    const nombreEl = document.getElementById("cliente-detalle-nombre");
+    const contactoEl = document.getElementById("cliente-detalle-contacto");
+    const numPedidosEl = document.getElementById("cliente-detalle-numpedidos");
+    const totalGastadoEl = document.getElementById("cliente-detalle-totalgastado");
+    const ultimoPedidoEl = document.getElementById("cliente-detalle-ultimopedido");
+    if (nombreEl) nombreEl.textContent = cliente.nombre;
+    if (contactoEl) contactoEl.textContent = [cliente.email, cliente.telefono].filter(Boolean).join(" · ");
+    if (numPedidosEl) numPedidosEl.textContent = String(cliente.numPedidos);
+    if (totalGastadoEl) totalGastadoEl.textContent = formatPriceCents(cliente.totalGastadoCents);
+    if (ultimoPedidoEl) ultimoPedidoEl.textContent = formatDate(cliente.ultimoPedidoEn);
+
+    if (clientePedidosList) {
+      clientePedidosList.innerHTML = "";
+      cliente.pedidos.forEach((pedido) => clientePedidosList.appendChild(renderPedido(pedido)));
+    }
+
+    if (clienteNotasTextarea) {
+      clienteNotasTextarea.value = "Cargando...";
+      clienteNotasTextarea.disabled = true;
+      clienteNotasError?.classList.add("hidden");
+      try {
+        clienteNotasTextarea.value = await getNotaCliente(cliente.clave);
+      } catch (err) {
+        clienteNotasTextarea.value = "";
+        if (clienteNotasError) {
+          clienteNotasError.textContent = err instanceof Error ? err.message : "No se pudo cargar la nota.";
+          clienteNotasError.classList.remove("hidden");
+        }
+      } finally {
+        clienteNotasTextarea.disabled = false;
+      }
+    }
+  }
+
+  clientesVolverBtn?.addEventListener("click", () => {
+    clientesDetailView?.classList.add("hidden");
+    clientesListView?.classList.remove("hidden");
+    clienteSeleccionado = null;
+  });
+
+  clienteNotasGuardarBtn?.addEventListener("click", async () => {
+    if (!clienteSeleccionado || !clienteNotasTextarea) return;
+    clienteNotasGuardarBtn.disabled = true;
+    clienteNotasError?.classList.add("hidden");
+    try {
+      await guardarNotaCliente(clienteSeleccionado.clave, clienteNotasTextarea.value);
+      clienteNotasGuardado?.classList.remove("hidden");
+      setTimeout(() => clienteNotasGuardado?.classList.add("hidden"), 2000);
+    } catch (err) {
+      if (clienteNotasError) {
+        clienteNotasError.textContent = err instanceof Error ? err.message : "No se pudo guardar la nota.";
+        clienteNotasError.classList.remove("hidden");
+      }
+    } finally {
+      clienteNotasGuardarBtn.disabled = false;
+    }
+  });
 
   const consultasList = document.getElementById("consultas-list");
   const consultasLoading = document.getElementById("consultas-loading");

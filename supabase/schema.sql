@@ -561,3 +561,27 @@ create policy "leads_agente: actualizacion solo admin"
   to authenticated
   using (true)
   with check (true);
+
+-- ------------------------------------------------------------
+-- 11. NOTAS DE CLIENTES — CRM basico en /admin, sin login de cliente.
+--     No hay tabla de "clientes": el panel agrupa los pedidos existentes
+--     por email (o telefono, si el email no coincide) al vuelo. Esta
+--     tabla solo guarda las observaciones manuales del admin sobre cada
+--     cliente, vinculadas por email.
+-- ------------------------------------------------------------
+
+create table if not exists public.notas_clientes (
+  email text primary key,
+  notas text not null default '',
+  actualizado_en timestamptz not null default now()
+);
+
+alter table public.notas_clientes enable row level security;
+
+-- Dato puramente interno del admin: sin acceso publico, ni lectura ni escritura.
+drop policy if exists "notas_clientes: solo admin" on public.notas_clientes;
+create policy "notas_clientes: solo admin"
+  on public.notas_clientes for all
+  to authenticated
+  using (true)
+  with check (true);
