@@ -104,6 +104,35 @@ entorno del sitio en Netlify, nunca las subas al repositorio.
 Un admin puede además marcar un pedido como pagado a mano desde `/admin` (pestaña Pedidos) — útil para pagos en
 efectivo al recoger en Elche o coordinados por otra vía fuera de Stripe.
 
+## 📊 Informe semanal de ventas automático
+
+Además del resumen manual bajo demanda en `/admin` (pestaña **Ventas**, con atajos de fecha y descarga
+CSV), existe una **Netlify Scheduled Function** (`netlify/functions/informe-semanal.ts`) que cada lunes
+a las 6:00 UTC calcula el mismo resumen pero de la semana anterior (total facturado, número de pedidos,
+clientes nuevos y productos más vendidos) y lo envía por email a `somos.hamy@gmail.com` vía Resend, con
+el detalle adjunto en CSV. La lógica de cálculo vive en `src/lib/ventas.ts`, compartida entre la pestaña
+del admin y esta función, para no mantenerla dos veces.
+
+**Importante:** las funciones programadas de Netlify **solo se ejecutan una vez el sitio está
+desplegado** — no se disparan con `npm run dev` ni con ningún comando en local, no hay forma de probarlas
+sin desplegar. El código ya está listo, pero hace falta esto tras el despliegue:
+
+1. Despliega el sitio a Netlify (o haz push si ya está conectado — el `netlify.toml` de la raíz declara
+   `netlify/functions` como carpeta de funciones, así Netlify la detecta sin configuración manual
+   adicional).
+2. En el dashboard de Netlify, ve a **Functions** del sitio y confirma que aparece `informe-semanal` con
+   un badge de **Scheduled** (el cron `0 6 * * 1` se lee directamente del código, `export const config`).
+3. Comprueba que las variables de entorno `RESEND_API_KEY`, `PUBLIC_SUPABASE_URL` y
+   `SUPABASE_SERVICE_ROLE_KEY` están puestas para el sitio en Netlify (deberían estarlo ya, son las mismas
+   que usan `/api/notify` y `/api/crear-pago` — las funciones programadas leen las mismas variables de
+   entorno del sitio).
+4. Para comprobar que funciona sin esperar al lunes, Netlify permite **invocar manualmente** una función
+   programada desde su propia página en el dashboard ("Trigger function" / "Run manually") — hazlo una vez
+   tras el primer despliegue para confirmar que llega el email.
+
+Si `RESEND_API_KEY` no está configurada, la función no falla: registra un aviso en los logs de Netlify y
+no envía nada, igual que `/api/notify`.
+
 ## 👀 Want to learn more?
 
 Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).

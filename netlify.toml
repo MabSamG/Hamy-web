@@ -1,0 +1,5 @@
+# Funciones propias de Netlify (no gestionadas por @astrojs/netlify), como el
+# informe semanal de ventas programado en netlify/functions/informe-semanal.ts.
+# Netlify solo las detecta y despliega si esta carpeta está declarada aquí.
+[functions]
+  directory = "netlify/functions"
