@@ -103,26 +103,25 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
       <div id="tab-clientes" class="tab-panel mt-6 hidden">
         <div id="clientes-list-view">
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-hamy-pink-light/20">
             <input
               id="clientes-buscar"
               type="search"
               placeholder="Buscar por nombre o email..."
-              class="w-full max-w-xs rounded-full border-2 border-hamy-pink-light/40 bg-white px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              class="w-full max-w-xs rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
             />
+            <span class="hidden h-6 w-px bg-hamy-pink-light/30 sm:block" aria-hidden="true"></span>
             <select
               id="clientes-orden"
-              class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              class="rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
             >
               <option value="ultimo_pedido_desc">Último pedido: más reciente primero</option>
               <option value="ultimo_pedido_asc">Último pedido: más antiguo primero</option>
               <option value="total_gastado_desc">Total gastado: mayor a menor</option>
             </select>
-          </div>
-          <div class="mt-3 flex flex-wrap items-center gap-3">
             <select
               id="clientes-filtro-fecha"
-              class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+              class="rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
             >
               <option value="todos">Última compra: cualquier fecha</option>
               <option value="7">Compraron en los últimos 7 días</option>
@@ -137,7 +136,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
                 <input
                   id="clientes-fecha-desde"
                   type="date"
-                  class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                  class="rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
                 />
               </label>
               <label class="flex items-center gap-1 text-xs text-hamy-brown-light">
@@ -145,7 +144,7 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
                 <input
                   id="clientes-fecha-hasta"
                   type="date"
-                  class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                  class="rounded-full border-2 border-hamy-pink-light/40 bg-hamy-cream px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
                 />
               </label>
             </div>
