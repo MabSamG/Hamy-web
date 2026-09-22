@@ -280,6 +280,7 @@ export type Cliente = {
   totalGastadoCents: number;
   ultimoPedidoEn: string;
   pedidos: Pedido[];
+  etiquetas: string[];
 };
 
 function normalizarEmailCliente(email: string): string {
@@ -337,13 +338,24 @@ export async function listClientes(): Promise<Cliente[]> {
     grupos.set(root, lista);
   }
 
+  // Carga las etiquetas de todos los clientes de una vez (barato: una fila
+  // por email en notas_clientes) en vez de una consulta por cliente.
+  const etiquetasPorEmail = new Map<string, string[]>();
+  const { data: notasRows, error: notasError } = await supabase.from("notas_clientes").select("email, etiquetas");
+  if (!notasError) {
+    for (const fila of notasRows ?? []) {
+      etiquetasPorEmail.set(fila.email as string, (fila.etiquetas as string[]) ?? []);
+    }
+  }
+
   const clientes: Cliente[] = [];
   for (const pedidosCliente of grupos.values()) {
     // listPedidos() ya viene ordenado por creado_en descendente.
     const masReciente = pedidosCliente[0];
     const telefono = pedidosCliente.find((p) => p.cliente_telefono)?.cliente_telefono ?? null;
+    const clave = normalizarEmailCliente(masReciente.cliente_email);
     clientes.push({
-      clave: normalizarEmailCliente(masReciente.cliente_email),
+      clave,
       nombre: masReciente.cliente_nombre,
       email: masReciente.cliente_email,
       telefono,
@@ -351,6 +363,7 @@ export async function listClientes(): Promise<Cliente[]> {
       totalGastadoCents: pedidosCliente.reduce((sum, p) => sum + p.total_cents, 0),
       ultimoPedidoEn: masReciente.creado_en,
       pedidos: pedidosCliente,
+      etiquetas: etiquetasPorEmail.get(clave) ?? [],
     });
   }
 
@@ -368,4 +381,11 @@ export async function guardarNotaCliente(clave: string, notas: string): Promise<
     .from("notas_clientes")
     .upsert({ email: clave, notas, actualizado_en: new Date().toISOString() });
   if (error) throw new Error(`No se pudo guardar la nota del cliente: ${error.message}`);
+}
+
+export async function guardarEtiquetasCliente(clave: string, etiquetas: string[]): Promise<void> {
+  const { error } = await supabase
+    .from("notas_clientes")
+    .upsert({ email: clave, etiquetas, actualizado_en: new Date().toISOString() });
+  if (error) throw new Error(`No se pudieron guardar las etiquetas: ${error.message}`);
 }

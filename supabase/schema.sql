@@ -573,8 +573,14 @@ create policy "leads_agente: actualizacion solo admin"
 create table if not exists public.notas_clientes (
   email text primary key,
   notas text not null default '',
+  -- Etiquetas libres del admin (ej. "recurrente", "VIP", "evento grande"),
+  -- se muestran como chips en la lista y en la ficha del cliente.
+  etiquetas text[] not null default '{}',
   actualizado_en timestamptz not null default now()
 );
+
+-- Para proyectos donde la tabla ya existia antes de esta columna.
+alter table public.notas_clientes add column if not exists etiquetas text[] not null default '{}';
 
 alter table public.notas_clientes enable row level security;
 
