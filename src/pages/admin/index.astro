@@ -112,6 +112,37 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
               <option value="total_gastado_desc">Total gastado: mayor a menor</option>
             </select>
           </div>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <select
+              id="clientes-filtro-fecha"
+              class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-4 py-2 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+            >
+              <option value="todos">Última compra: cualquier fecha</option>
+              <option value="7">Compraron en los últimos 7 días</option>
+              <option value="30">Compraron en los últimos 30 días</option>
+              <option value="sin_30">Sin comprar hace más de 30 días</option>
+              <option value="sin_90">Sin comprar hace más de 90 días</option>
+              <option value="rango">Rango de fechas personalizado...</option>
+            </select>
+            <div id="clientes-fecha-rango-wrap" class="hidden flex flex-wrap items-center gap-2">
+              <label class="flex items-center gap-1 text-xs text-hamy-brown-light">
+                Desde
+                <input
+                  id="clientes-fecha-desde"
+                  type="date"
+                  class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                />
+              </label>
+              <label class="flex items-center gap-1 text-xs text-hamy-brown-light">
+                Hasta
+                <input
+                  id="clientes-fecha-hasta"
+                  type="date"
+                  class="rounded-full border-2 border-hamy-pink-light/40 bg-white px-3 py-1.5 text-sm text-hamy-brown focus:border-hamy-coral focus:outline-none"
+                />
+              </label>
+            </div>
+          </div>
           <p id="clientes-loading" class="mt-4 text-hamy-brown-light">Cargando clientes...</p>
           <p id="clientes-empty" class="hidden mt-4 text-hamy-brown-light">Todavía no hay clientes.</p>
           <p id="clientes-sin-resultados" class="hidden mt-4 text-hamy-brown-light">Ningún cliente coincide con la búsqueda.</p>
@@ -713,6 +744,10 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
   const clientesSinResultados = document.getElementById("clientes-sin-resultados");
   const clientesBuscar = document.getElementById("clientes-buscar") as HTMLInputElement | null;
   const clientesOrden = document.getElementById("clientes-orden") as HTMLSelectElement | null;
+  const clientesFiltroFecha = document.getElementById("clientes-filtro-fecha") as HTMLSelectElement | null;
+  const clientesFechaRangoWrap = document.getElementById("clientes-fecha-rango-wrap");
+  const clientesFechaDesde = document.getElementById("clientes-fecha-desde") as HTMLInputElement | null;
+  const clientesFechaHasta = document.getElementById("clientes-fecha-hasta") as HTMLInputElement | null;
 
   function renderClienteRow(cliente: Cliente): HTMLElement {
     const li = document.createElement("li");
@@ -772,6 +807,28 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
         (c) => c.nombre.toLowerCase().includes(busqueda) || c.email.toLowerCase().includes(busqueda),
       );
     }
+
+    const filtroFecha = clientesFiltroFecha?.value ?? "todos";
+    if (filtroFecha === "7" || filtroFecha === "30") {
+      const desdeTs = Date.now() - Number(filtroFecha) * 24 * 60 * 60 * 1000;
+      lista = lista.filter((c) => new Date(c.ultimoPedidoEn).getTime() >= desdeTs);
+    } else if (filtroFecha === "sin_30" || filtroFecha === "sin_90") {
+      const dias = filtroFecha === "sin_30" ? 30 : 90;
+      const limiteTs = Date.now() - dias * 24 * 60 * 60 * 1000;
+      lista = lista.filter((c) => new Date(c.ultimoPedidoEn).getTime() < limiteTs);
+    } else if (filtroFecha === "rango") {
+      const desdeStr = clientesFechaDesde?.value;
+      const hastaStr = clientesFechaHasta?.value;
+      if (desdeStr) {
+        const desdeTs = new Date(`${desdeStr}T00:00:00`).getTime();
+        lista = lista.filter((c) => new Date(c.ultimoPedidoEn).getTime() >= desdeTs);
+      }
+      if (hastaStr) {
+        const hastaTs = new Date(`${hastaStr}T23:59:59`).getTime();
+        lista = lista.filter((c) => new Date(c.ultimoPedidoEn).getTime() <= hastaTs);
+      }
+    }
+
     const orden = clientesOrden?.value ?? "ultimo_pedido_desc";
     lista = [...lista].sort((a, b) => {
       if (orden === "total_gastado_desc") return b.totalGastadoCents - a.totalGastadoCents;
@@ -813,6 +870,12 @@ import { PERSONALIZATION_TEMPLATES } from "../../data/personalization";
 
   clientesBuscar?.addEventListener("input", renderClientesList);
   clientesOrden?.addEventListener("change", renderClientesList);
+  clientesFiltroFecha?.addEventListener("change", () => {
+    clientesFechaRangoWrap?.classList.toggle("hidden", clientesFiltroFecha.value !== "rango");
+    renderClientesList();
+  });
+  clientesFechaDesde?.addEventListener("change", renderClientesList);
+  clientesFechaHasta?.addEventListener("change", renderClientesList);
 
   const clientesVolverBtn = document.getElementById("clientes-volver");
   const clienteNotasTextarea = document.getElementById("cliente-notas") as HTMLTextAreaElement | null;
