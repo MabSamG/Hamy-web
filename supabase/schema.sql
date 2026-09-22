@@ -14,6 +14,25 @@
 create extension if not exists pgcrypto;
 
 -- ------------------------------------------------------------
+-- ROL DE SOLO LECTURA (demo) — un usuario de Supabase Auth con
+-- app_metadata.rol = 'demo' (solo se puede marcar con la service_role key,
+-- el usuario no puede cambiarselo el mismo) puede LEER todo el panel /admin
+-- igual que el admin real, pero cualquier escritura queda bloqueada aqui en
+-- RLS, no solo ocultando botones en la UI — asi el catalogo/pedidos reales
+-- quedan a salvo aunque alguien intente escribir directamente con supabase-js
+-- desde la consola del navegador. Un admin normal no tiene ese campo, y
+-- coalesce(...) lo trata como "no es demo", asi que no le afecta.
+-- ------------------------------------------------------------
+
+create or replace function public.es_admin_editor()
+returns boolean
+language sql
+stable
+as $$
+  select coalesce(auth.jwt() -> 'app_metadata' ->> 'rol', 'admin') <> 'demo';
+$$;
+
+-- ------------------------------------------------------------
 -- 1. CATEGORIAS — categorias del catalogo, editables desde /admin
 --    (crear una nueva categoria al añadir un producto la guarda aqui,
 --    y la web publica las lee de esta tabla, sin tocar codigo)
@@ -40,8 +59,8 @@ drop policy if exists "categorias: escritura solo admin" on public.categorias;
 create policy "categorias: escritura solo admin"
   on public.categorias for all
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
 
 insert into public.categorias (slug, nombre, descripcion, emoji) values
   ('llaveros', 'Llaveros', 'Pequeños detalles para llevar siempre contigo.', '🔑'),
@@ -95,12 +114,13 @@ create policy "productos: lectura publica"
   using (true);
 
 -- Solo un admin autenticado (Supabase Auth) puede crear/editar/borrar productos.
+-- (es_admin_editor() excluye a la cuenta demo de solo lectura, ver arriba)
 drop policy if exists "productos: escritura solo admin" on public.productos;
 create policy "productos: escritura solo admin"
   on public.productos for all
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
 
 -- ------------------------------------------------------------
 -- 3. PEDIDOS — cada pedido con su personalizacion en JSON
@@ -208,8 +228,8 @@ drop policy if exists "pedidos: actualizacion solo admin" on public.pedidos;
 create policy "pedidos: actualizacion solo admin"
   on public.pedidos for update
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
 
 -- ------------------------------------------------------------
 -- 4. STORAGE — fotos que suben los clientes al personalizar
@@ -237,13 +257,13 @@ drop policy if exists "fotos-pedidos: gestion solo admin" on storage.objects;
 create policy "fotos-pedidos: gestion solo admin"
   on storage.objects for update
   to authenticated
-  using (bucket_id = 'fotos-pedidos');
+  using (bucket_id = 'fotos-pedidos' and public.es_admin_editor());
 
 drop policy if exists "fotos-pedidos: borrado solo admin" on storage.objects;
 create policy "fotos-pedidos: borrado solo admin"
   on storage.objects for delete
   to authenticated
-  using (bucket_id = 'fotos-pedidos');
+  using (bucket_id = 'fotos-pedidos' and public.es_admin_editor());
 
 -- ------------------------------------------------------------
 -- 5. SEED — catalogo actual (los 4 productos ya construidos)
@@ -412,8 +432,8 @@ drop policy if exists "consultas_eventos: actualizacion solo admin" on public.co
 create policy "consultas_eventos: actualizacion solo admin"
   on public.consultas_eventos for update
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
 
 -- Foto de referencia opcional que el cliente sube al pedir presupuesto.
 insert into storage.buckets (id, name, public)
@@ -436,13 +456,13 @@ drop policy if exists "fotos-eventos: gestion solo admin" on storage.objects;
 create policy "fotos-eventos: gestion solo admin"
   on storage.objects for update
   to authenticated
-  using (bucket_id = 'fotos-eventos');
+  using (bucket_id = 'fotos-eventos' and public.es_admin_editor());
 
 drop policy if exists "fotos-eventos: borrado solo admin" on storage.objects;
 create policy "fotos-eventos: borrado solo admin"
   on storage.objects for delete
   to authenticated
-  using (bucket_id = 'fotos-eventos');
+  using (bucket_id = 'fotos-eventos' and public.es_admin_editor());
 
 -- ------------------------------------------------------------
 -- 8. MENSAJES DE CONTACTO — formulario general de /contacto
@@ -475,8 +495,8 @@ drop policy if exists "mensajes_contacto: actualizacion solo admin" on public.me
 create policy "mensajes_contacto: actualizacion solo admin"
   on public.mensajes_contacto for update
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
 
 -- ------------------------------------------------------------
 -- 9. CONSULTA PUBLICA DE PEDIDOS — /mi-pedido (referencia + email)
@@ -559,8 +579,8 @@ drop policy if exists "leads_agente: actualizacion solo admin" on public.leads_a
 create policy "leads_agente: actualizacion solo admin"
   on public.leads_agente for update
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
 
 -- ------------------------------------------------------------
 -- 11. NOTAS DE CLIENTES — CRM basico en /admin, sin login de cliente.
@@ -584,10 +604,22 @@ alter table public.notas_clientes add column if not exists etiquetas text[] not 
 
 alter table public.notas_clientes enable row level security;
 
--- Dato puramente interno del admin: sin acceso publico, ni lectura ni escritura.
+-- Dato puramente interno del admin: sin acceso publico. Cualquier autenticado
+-- (admin o demo) puede leerlas, pero solo un admin editor puede escribirlas
+-- (la politica "for all" de abajo cubre insert/update/delete; select ya
+-- queda permitido por la politica de lectura, y en Postgres las politicas
+-- permisivas se combinan con OR).
 drop policy if exists "notas_clientes: solo admin" on public.notas_clientes;
-create policy "notas_clientes: solo admin"
+
+drop policy if exists "notas_clientes: lectura autenticada" on public.notas_clientes;
+create policy "notas_clientes: lectura autenticada"
+  on public.notas_clientes for select
+  to authenticated
+  using (true);
+
+drop policy if exists "notas_clientes: escritura solo admin editor" on public.notas_clientes;
+create policy "notas_clientes: escritura solo admin editor"
   on public.notas_clientes for all
   to authenticated
-  using (true)
-  with check (true);
+  using (public.es_admin_editor())
+  with check (public.es_admin_editor());
